@@ -125,7 +125,7 @@ internal static class TciStreamPayload
             receiver,
             sampleRate,
             TciSampleType.Float32,
-            length: 0,
+            length: 4096,
             streamType: TciStreamType.TxChrono,
             samplePayload: ReadOnlySpan<byte>.Empty);
     }
