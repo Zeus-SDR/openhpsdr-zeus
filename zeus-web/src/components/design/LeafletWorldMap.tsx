@@ -78,9 +78,19 @@ type LeafletWorldMapProps = {
   beamHalfWidthDeg?: number;
   /** When true, arcs and markers are drawn; otherwise the map renders empty-ish. */
   active: boolean;
-  /** When true, user can drag/zoom the map (zoom control appears). Off by
-   *  default — the spectrum above owns pointer events for click-to-tune. */
+  /** When true, user can drag/zoom the map. Off by default — the spectrum
+   *  above owns pointer events for click-to-tune. */
   interactive?: boolean;
+  /** When true, render Leaflet's +/- zoom control in the corner. Defaults to
+   *  the value of `interactive`. The rotator compass keeps interactive=true
+   *  (wheel/drag/pinch) but turns this off so the buttons don't overlap its
+   *  own NOW/SP/LP overlay. */
+  showZoomControl?: boolean;
+  /** When true (default), this map claims the shared `ACTIVE_MAP_REF`
+   *  singleton on mount so global Alt+Up/Alt+Down shortcuts drive it. The
+   *  rotator compass map sets this false so the hero-panel background map
+   *  stays the keyboard-zoom target even when the rotator panel is mounted. */
+  claimActiveMapRef?: boolean;
   /** If present, the target popup shows a "Rotate to NNN°" button that calls
    *  this with the current great-circle bearing. Wire to rotator-store. */
   onRotateToBearing?: (bearingDeg: number) => void;
@@ -238,9 +248,12 @@ export function LeafletWorldMap({
   beamHalfWidthDeg = 10.5,
   active,
   interactive = false,
+  showZoomControl,
+  claimActiveMapRef = true,
   onRotateToBearing,
   mapRef: externalMapRef,
 }: LeafletWorldMapProps) {
+  const wantZoomControl = showZoomControl ?? interactive;
   // Wrapper owns our dynamic className (`interactive`, aria-hidden). Leaflet
   // mounts into an inner div whose className we never touch, so the
   // `leaflet-container`/`leaflet-grab`/etc classes Leaflet writes directly to
@@ -309,8 +322,9 @@ export function LeafletWorldMap({
     if (externalMapRef) externalMapRef.current = map;
     // Populate the shared ACTIVE_MAP_REF singleton so global keyboard
     // shortcuts (Alt+Up/Down) can drive zoom regardless of which layout
-    // tree mounted us.
-    ACTIVE_MAP_REF.current = map;
+    // tree mounted us. The rotator compass passes claimActiveMapRef=false
+    // so it doesn't steal the keyboard shortcut from the hero background.
+    if (claimActiveMapRef) ACTIVE_MAP_REF.current = map;
 
     const ro = new ResizeObserver(() => map.invalidateSize());
     ro.observe(el);
@@ -327,7 +341,7 @@ export function LeafletWorldMap({
       // could have set the singleton between our mount and unmount.
       if (ACTIVE_MAP_REF.current === map) ACTIVE_MAP_REF.current = null;
     };
-  }, [externalMapRef]);
+  }, [externalMapRef, claimActiveMapRef]);
 
   // Toggle pan/zoom handlers in response to the `interactive` prop. Keeping
   // the map mounted (rather than recreating it) preserves the current pan
@@ -348,13 +362,13 @@ export function LeafletWorldMap({
       if (interactive) h.enable();
       else h.disable();
     }
-    if (interactive && !zoomCtrlRef.current) {
+    if (wantZoomControl && !zoomCtrlRef.current) {
       zoomCtrlRef.current = L.control.zoom({ position: 'topleft' }).addTo(map);
-    } else if (!interactive && zoomCtrlRef.current) {
+    } else if (!wantZoomControl && zoomCtrlRef.current) {
       zoomCtrlRef.current.remove();
       zoomCtrlRef.current = null;
     }
-  }, [interactive]);
+  }, [interactive, wantZoomControl]);
 
   // Redraw markers + great-circle arc when home/target change.
   //

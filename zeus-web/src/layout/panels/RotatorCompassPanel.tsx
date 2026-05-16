@@ -95,7 +95,9 @@ export function RotatorCompassPanel() {
               beamRangeKm={6000}
               beamHalfWidthDeg={10}
               active={true}
-              interactive={false}
+              interactive={true}
+              showZoomControl={false}
+              claimActiveMapRef={false}
               onRotateToBearing={(deg) => { void setAzimuth(Math.round(deg)); }}
             />
           )}
