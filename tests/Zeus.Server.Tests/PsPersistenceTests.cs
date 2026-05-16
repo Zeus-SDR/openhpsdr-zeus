@@ -221,9 +221,10 @@ public class PsPersistenceTests : IDisposable
         radio1.SetPsAdvanced(new PsAdvancedSetRequest(HwPeak: 0.655));
 
         // Switch to HL2 (P1) — connect should pull the HL2 factory default
-        // (0.20 after PR #341), NOT the G2's operator-tuned 0.655.
+        // (0.2500 after PR #341 voice-tuning revision), NOT the G2's
+        // operator-tuned 0.655.
         radio1.ApplyPsHwPeakForConnection(isProtocol2: false, board: HpsdrBoardKind.HermesLite2);
-        Assert.Equal(0.20, radio1.Snapshot().PsHwPeak);
+        Assert.Equal(0.2500, radio1.Snapshot().PsHwPeak);
 
         // Operator calibrates the HL2 to 0.21 — write should land in the HL2
         // slot, leaving the G2 slot untouched.
