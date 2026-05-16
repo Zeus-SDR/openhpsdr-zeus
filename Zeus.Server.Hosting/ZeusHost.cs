@@ -156,11 +156,42 @@ public static class ZeusHost
         builder.Services.AddSingleton<RadioService>();
         builder.Services.AddSingleton<StreamingHub>();
         // RX audio publish seam (Phase 1). DspPipelineService.PublishAudio
-        // fans each AudioFrame across every registered IRxAudioSink. The
-        // default WebSocketAudioSink reproduces the pre-seam direct hub
-        // broadcast; desktop mode registers NativeAudioSink in its place
-        // (Phase 2b) so the audio bypasses the WS path entirely.
-        builder.Services.AddSingleton<IRxAudioSink, WebSocketAudioSink>();
+        // fans each AudioFrame across every registered IRxAudioSink.
+        //
+        //  - Server mode → WebSocketAudioSink (default): bit-for-bit
+        //    equivalent of the pre-seam direct hub broadcast.
+        //  - Desktop mode → NativeAudioSink (Phase 2b): pushes RX audio
+        //    straight to the OS default output device via miniaudio,
+        //    bypassing the WS path entirely. The SPA's audio decoder is
+        //    opted out by Phase 2c so the browser never tries to play
+        //    audio it isn't being sent.
+        if (options.HostMode == ZeusHostMode.Desktop)
+        {
+            // Singleton so the same instance serves both the IRxAudioSink
+            // collection (consumed by DspPipelineService) and the
+            // IHostedService collection (responsible for opening + closing
+            // the playback device alongside the host lifecycle).
+            builder.Services.AddSingleton<NativeAudioSink>();
+            builder.Services.AddSingleton<IRxAudioSink>(sp =>
+                sp.GetRequiredService<NativeAudioSink>());
+            builder.Services.AddHostedService(sp =>
+                sp.GetRequiredService<NativeAudioSink>());
+
+            // Mic capture: replaces the browser → WS MicPcm uplink in
+            // desktop mode. TxAudioIngest still subscribes to
+            // StreamingHub.MicPcmReceived (harmless — the SPA's mic worklet
+            // is disabled by Phase 2c, so no frames arrive), and
+            // NativeMicCapture feeds the same OnMicPcmBytes entry point
+            // directly so the WDSP TXA chain, IQ ring, and protocol
+            // packers don't see any difference between transports.
+            builder.Services.AddSingleton<NativeMicCapture>();
+            builder.Services.AddHostedService(sp =>
+                sp.GetRequiredService<NativeMicCapture>());
+        }
+        else
+        {
+            builder.Services.AddSingleton<IRxAudioSink, WebSocketAudioSink>();
+        }
         // WDSPwisdom bootstrap: run FFTW plan caching on a worker at app start so the
         // first /api/connect isn't blocked for ~2 min while WDSP plans FFTs 64..262144.
         // Clients are told to keep Connect disabled until phase=Ready.

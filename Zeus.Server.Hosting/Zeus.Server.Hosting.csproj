@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- LibraryImport source-gen + the miniaudio data-callback paths need
+         to view native pointers as Span<float> / ReadOnlySpan<float>. The
+         unsafe scope is bounded to the FFI seam (MiniAudio*.cs). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SpaRoot>$(MSBuildThisFileDirectory)..\zeus-web</SpaRoot>
     <SpaBuildOutput>$(MSBuildThisFileDirectory)wwwroot\index.html</SpaBuildOutput>
   </PropertyGroup>

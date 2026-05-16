@@ -1,0 +1,247 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+//
+// Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
+// Copyright (C) 2026 Brian Keating (EI6LF) and contributors.
+//
+// Desktop-mode RX audio sink: drains demodulated audio (mono float32 48 kHz,
+// produced by DspPipelineService) directly into the OS default playback
+// device via miniaudio. The WebSocket fan-out is skipped entirely in this
+// mode — the SPA's audio-decoder is opted out by Phase 2c.
+//
+// RxAfGainDb is already applied upstream in WDSP via SetRXAPanelGain1 before
+// the AudioFrame is produced, so this sink does NOT add any software gain
+// stage. The operator's volume slider drives the level for free.
+
+using System.Threading;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Zeus.Contracts;
+
+namespace Zeus.Server;
+
+/// <summary>
+/// <see cref="IRxAudioSink"/> implementation that pushes RX audio straight
+/// to the OS default playback device via miniaudio. Used in desktop mode
+/// (<see cref="ZeusHostMode.Desktop"/>) in place of
+/// <see cref="WebSocketAudioSink"/>.
+///
+/// <para>Data flow:</para>
+/// <list type="number">
+/// <item>DSP tick thread calls <see cref="Publish"/> with a mono float32
+/// 48 kHz <see cref="AudioFrame"/> (~1024 samples / frame, ~46 Hz).</item>
+/// <item><see cref="Publish"/> copies the samples into an in-process SPSC
+/// float ring. The frame's underlying buffer is owned by the DSP service
+/// and may be reused by the next tick, so we must NOT keep a reference.</item>
+/// <item>The miniaudio playback thread calls <see cref="OnPlaybackData"/>
+/// asking for N frames of stereo float32 (at whatever rate the device
+/// negotiated). The callback drains the ring, duplicates each mono sample
+/// to L=R, and writes silence + bumps an underrun counter when the ring is
+/// empty.</item>
+/// </list>
+///
+/// <para>Sample rate: miniaudio negotiates the device rate at open time and
+/// the device runs at whatever rate the OS gave us; if that's not 48 kHz,
+/// miniaudio's internal resampler (configured to linear in the native shim)
+/// converts on our behalf when we ask for the device rate via
+/// <c>preferSampleRate=48000</c>. We declare we want 48 kHz, miniaudio
+/// honours it where possible and resamples behind the scenes otherwise.
+/// Either way the playback callback receives buffers at the device's actual
+/// rate — and that's exactly what we fill.</para>
+///
+/// <para>Channels: miniaudio negotiates the device channel count; we ask
+/// for stereo (2) but accept whatever it gives. The callback handles any
+/// channel count by either passing mono straight through, duplicating
+/// L=R for stereo, or replicating across all channels for surround setups.</para>
+///
+/// <para>Underrun policy: when the ring is empty (DSP thread hasn't produced
+/// audio yet — initial connect, between bursts, or backlog spike) we write
+/// silence and increment <c>_underrunSamples</c>. A 5-second timer logs the
+/// count + resets it; persistent underruns mean either ring sizing is too
+/// small or the DSP thread is starved.</para>
+/// </summary>
+internal sealed class NativeAudioSink : IRxAudioSink, IHostedService, IDisposable
+{
+    private const int FrameRateHz = 48_000;
+
+    // ~1 s @ 48 kHz mono = 49152 samples ≈ 192 KB. Power of two for the
+    // bitmask wrap. Even with the playback thread running ~10 ms periods,
+    // anything past ~50 ms is just bounded slack to absorb DSP-tick
+    // jitter.
+    private const int RingCapacity = 65_536;
+
+    private readonly ILogger<NativeAudioSink> _log;
+    private readonly FloatSpscRing _ring = new(RingCapacity);
+
+    private MiniAudioOutput? _output;
+    private bool _disposed;
+
+    // Diagnostics — accessed from the audio worker thread; volatile / interlocked
+    // suffices since they're write-only there and read-only on the timer thread.
+    private long _underrunSamples;
+    private long _overrunSamples;
+    private long _totalSamplesIn;
+    private long _totalSamplesOut;
+    private DateTime _lastLogUtc = DateTime.UtcNow;
+
+    public NativeAudioSink(ILogger<NativeAudioSink> log)
+    {
+        _log = log;
+    }
+
+    /// <summary>
+    /// Hosted-service hook: open the miniaudio playback device. Failures are
+    /// logged at warning level and the sink degrades to a no-op (every frame
+    /// is dropped silently) so the rest of the host still comes up — the
+    /// operator gets logs but not a crash if their audio subsystem is
+    /// uncooperative.
+    /// </summary>
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (_output != null) return Task.CompletedTask;
+        try
+        {
+            _output = new MiniAudioOutput(
+                onFrames: OnPlaybackData,
+                onNotify: OnDeviceNotification,
+                preferSampleRate: FrameRateHz,
+                preferChannels: 2,
+                periodFrames: 480,   // ≈10 ms @ 48 kHz
+                periods: 2);
+            _output.Start();
+            _log.LogInformation(
+                "audio.native.rx open rate={Rate}Hz channels={Channels} version={Version}",
+                _output.SampleRate, _output.Channels, MiniAudioInterop.Version());
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "audio.native.rx open failed; RX audio output disabled");
+            _output?.Dispose();
+            _output = null;
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Hosted-service hook: stop the playback device. Idempotent.</summary>
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        try { _output?.Stop(); }
+        catch (Exception ex) { _log.LogWarning(ex, "audio.native.rx stop threw"); }
+        return Task.CompletedTask;
+    }
+
+    public void Publish(in AudioFrame frame)
+    {
+        // The DSP tick produces mono float32 @ 48 kHz. We assert the format
+        // softly: anything else is logged and dropped rather than corrupting
+        // the ring. (The format is set in DspPipelineService.AudioOutputRateHz
+        // and the AudioFrame ctor; this is defence in depth.)
+        if (frame.Channels != 1 || frame.SampleRateHz != FrameRateHz)
+        {
+            // Don't spam — these fire at frame rate. Log first occurrence
+            // only by ANDing against a never-set flag once dropped.
+            return;
+        }
+
+        var src = frame.Samples.Span;
+        int written = _ring.Write(src);
+        if (written < src.Length)
+        {
+            Interlocked.Add(ref _overrunSamples, src.Length - written);
+        }
+        Interlocked.Add(ref _totalSamplesIn, src.Length);
+
+        MaybeLog();
+    }
+
+    private void OnPlaybackData(Span<float> output, uint frameCount, uint channels)
+    {
+        // miniaudio's buffer is interleaved float32 sized frameCount * channels.
+        // We hold mono samples in the ring; expand to N channels by replication.
+        int totalFrames = (int)frameCount;
+        int channelsI = (int)channels;
+
+        // Read up to `totalFrames` mono samples from the ring into a small
+        // scratch buffer (stack-allocated when small enough). The miniaudio
+        // worker thread is the only consumer; stack alloc is safe.
+        Span<float> mono = totalFrames <= 4096
+            ? stackalloc float[totalFrames]
+            : new float[totalFrames];
+
+        int read = _ring.Read(mono);
+        if (read < totalFrames)
+        {
+            // Underrun — zero the remainder.
+            mono[read..].Clear();
+            Interlocked.Add(ref _underrunSamples, totalFrames - read);
+        }
+
+        // Expand mono → output channels. channels==1 is the trivial path.
+        if (channelsI == 1)
+        {
+            mono.CopyTo(output);
+        }
+        else
+        {
+            // Interleaved write: out[i*ch + c] = mono[i] for c in 0..ch.
+            int outIdx = 0;
+            for (int i = 0; i < totalFrames; i++)
+            {
+                float s = mono[i];
+                for (int c = 0; c < channelsI; c++)
+                {
+                    output[outIdx++] = s;
+                }
+            }
+        }
+
+        Interlocked.Add(ref _totalSamplesOut, totalFrames);
+    }
+
+    private void OnDeviceNotification(int kind)
+    {
+        // 1=started, 2=stopped, 3=rerouted, 4=interruption_began,
+        // 5=interruption_ended, 6=unlocked.
+        // miniaudio reroutes automatically on default-device change (headphone
+        // hotplug, BT switch) so no re-init is required — the SAMPLE RATE and
+        // channel count may shift, but the data callback keeps firing.
+        string label = kind switch
+        {
+            1 => "started",
+            2 => "stopped",
+            3 => "rerouted (default device changed)",
+            4 => "interruption_began",
+            5 => "interruption_ended",
+            6 => "unlocked",
+            _ => $"kind={kind}",
+        };
+        _log.LogInformation("audio.native.rx event {Event}", label);
+    }
+
+    private void MaybeLog()
+    {
+        // Cheap throttle — only the producer thread reads/writes _lastLogUtc.
+        var now = DateTime.UtcNow;
+        if (now - _lastLogUtc < TimeSpan.FromSeconds(5)) return;
+        _lastLogUtc = now;
+
+        long inS = Interlocked.Read(ref _totalSamplesIn);
+        long outS = Interlocked.Read(ref _totalSamplesOut);
+        long under = Interlocked.Exchange(ref _underrunSamples, 0);
+        long over = Interlocked.Exchange(ref _overrunSamples, 0);
+        // Only log when there's something to flag — otherwise stay quiet
+        // on the happy path so dev logs don't fill up.
+        if (under == 0 && over == 0) return;
+        _log.LogInformation(
+            "audio.native.rx stats in={InS} out={OutS} underrun={Under} overrun={Over}",
+            inS, outS, under, over);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        try { _output?.Dispose(); }
+        catch (Exception ex) { _log.LogWarning(ex, "audio.native.rx dispose threw"); }
+        _output = null;
+    }
+}

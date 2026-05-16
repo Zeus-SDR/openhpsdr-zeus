@@ -45,10 +45,11 @@ tools/demo-server/obj/
 zeus.db*
 .dbkey
 
-# Native WDSP build cache. The staged library under
-# Zeus.Dsp/runtimes/<rid>/native/ IS committed so managed-side tests
+# Native WDSP / miniaudio build caches. The staged libraries under
+# Zeus.Dsp/runtimes/<rid>/native/ ARE committed so managed-side tests
 # don't need to run CMake before executing.
 native/build/
+native/build-miniaudio/
 
 # Playwright-MCP accessibility snapshots and console logs — regenerated
 # on every browser-automation run; do not track.
