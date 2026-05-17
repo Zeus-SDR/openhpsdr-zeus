@@ -53,9 +53,31 @@
   <!-- Build the React frontend into Zeus.Server.Hosting/wwwroot so it flows to
        this executable's publish output. Owning the SPA build at the executable
        layer (not in the library) keeps 'dotnet build Zeus.Server.Hosting' from
-       shelling out to npm. -->
-  <Target Name="BuildSpa" BeforeTargets="Publish" Condition="!Exists('$(SpaBuildOutput)') Or '$(ForceSpaBuild)' == 'true'">
+       shelling out to npm.
+
+       Two targets, two contracts (issue #350):
+
+       1. BuildSpa: BeforeTargets="Publish" — UNCONDITIONAL. Every publish
+          rebuilds the SPA. The previous '!Exists($(SpaBuildOutput))' gate
+          would skip the npm build whenever wwwroot was already populated
+          from a prior 'dotnet run' or 'npm run build', so 'dotnet publish'
+          (and therefore the installer scripts) silently shipped whatever
+          frontend bundle happened to be lying around. Now publish always
+          regenerates wwwroot.
+
+       2. BuildSpaForBuild: BeforeTargets="Build", conditional on missing
+          wwwroot. This keeps 'dotnet run' / IDE incremental builds fast
+          when wwwroot is hot, and only triggers an npm build on first
+          checkout (or after a manual wipe). Build paths are dev-time, so
+          the cached-wwwroot behaviour is the right default there. -->
+  <Target Name="BuildSpa" BeforeTargets="Publish">
     <Message Importance="high" Text="Building React frontend in $(SpaRoot) → $(SpaBuildOutput)" />
+    <Exec Command="npm ci" WorkingDirectory="$(SpaRoot)" />
+    <Exec Command="npm run build" WorkingDirectory="$(SpaRoot)" />
+  </Target>
+
+  <Target Name="BuildSpaForBuild" BeforeTargets="Build" Condition="!Exists('$(SpaBuildOutput)')">
+    <Message Importance="high" Text="Building React frontend in $(SpaRoot) → $(SpaBuildOutput) (first-time / wwwroot missing)" />
     <Exec Command="npm ci" WorkingDirectory="$(SpaRoot)" />
     <Exec Command="npm run build" WorkingDirectory="$(SpaRoot)" />
   </Target>

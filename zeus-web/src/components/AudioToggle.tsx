@@ -46,16 +46,39 @@ import { useEffect, useState } from 'react';
 import { getAudioClient, type AudioClientState } from '../audio/audio-client';
 import { useCapabilitiesStore } from '../state/capabilities-store';
 
+// Desktop-mode (Photino) Mute/Unmute path. The webview's in-browser audio
+// decoder is opted out — RX audio reaches the operator via NativeAudioSink
+// (miniaudio) on the host. We render the same button as server mode and
+// route clicks through /api/audio/native, which flips a flag on the sink
+// that drops frames before they hit the OS device.
+async function fetchNativeMuted(): Promise<boolean> {
+  const r = await fetch('/api/audio/native');
+  if (!r.ok) throw new Error(`GET /api/audio/native ${r.status}`);
+  const j = (await r.json()) as { supported: boolean; muted: boolean };
+  return j.muted;
+}
+
+async function postNativeMuted(muted: boolean): Promise<boolean> {
+  const r = await fetch('/api/audio/native/mute', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ muted }),
+  });
+  if (!r.ok) throw new Error(`POST /api/audio/native/mute ${r.status}`);
+  const j = (await r.json()) as { muted: boolean };
+  return j.muted;
+}
+
 export function AudioToggle() {
   const [state, setState] = useState<AudioClientState>({ kind: 'idle' });
-  // Phase 2c — in desktop mode the host process renders RX audio through
-  // its native miniaudio sink, so the Mute/Unmute button (which gates an
-  // in-browser AudioContext) is meaningless. Render a passive status
-  // indicator in its place. The AF slider next door still drives the
-  // server-side WDSP gain, so volume control is fully functional in both
-  // modes without touching this component.
   const hostMode = useCapabilitiesStore((s) => s.capabilities?.host ?? null);
   const nativeAudio = hostMode === 'desktop';
+
+  // Server-side mute state for the desktop path. Hydrated from
+  // /api/audio/native on mount and after each toggle.
+  const [nativeMuted, setNativeMuted] = useState<boolean | null>(null);
+  const [nativeBusy, setNativeBusy] = useState(false);
+  const [nativeError, setNativeError] = useState<string | null>(null);
 
   useEffect(() => {
     return getAudioClient().subscribe((s) => {
@@ -63,20 +86,56 @@ export function AudioToggle() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!nativeAudio) return;
+    let cancelled = false;
+    fetchNativeMuted()
+      .then((m) => { if (!cancelled) setNativeMuted(m); })
+      .catch((err) => { if (!cancelled) setNativeError(err.message ?? String(err)); });
+    return () => { cancelled = true; };
+  }, [nativeAudio]);
+
+  // Desktop path: server-side mute via REST. Same visual treatment as the
+  // browser path so the two host modes look identical to the operator.
   if (nativeAudio) {
+    const muted = nativeMuted ?? false;
+    const onClick = async () => {
+      if (nativeBusy) return;
+      setNativeBusy(true);
+      setNativeError(null);
+      try {
+        const next = await postNativeMuted(!muted);
+        setNativeMuted(next);
+      } catch (err) {
+        setNativeError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setNativeBusy(false);
+      }
+    };
+    const label = nativeBusy ? 'Loading…' : muted ? '▶ Unmute' : '■ Mute';
     return (
-      <div
-        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-        title="RX audio is playing through the host's default output device."
-      >
-        <span className="chip">
-          <span className="k">AUDIO</span>
-          <span className="v">native (default device)</span>
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button
+          type="button"
+          onPointerUp={onClick}
+          disabled={nativeBusy}
+          className={`btn tx-btn ${muted ? 'active' : ''}`}
+          title={nativeError ?? 'RX audio is playing through the host\'s default output device.'}
+        >
+          <span className={`led ${muted ? 'on' : ''}`} style={{ marginRight: 6 }} />
+          {label}
+        </button>
+        {nativeError && (
+          <span className="label-xs" style={{ color: 'var(--tx)' }}>
+            audio error
+          </span>
+        )}
       </div>
     );
   }
 
+  // Browser path (server mode + any LAN client of a shared desktop): the
+  // button gates the in-browser AudioContext that decodes WS audio frames.
   const onClick = async () => {
     const client = getAudioClient();
     if (state.kind === 'playing' || state.kind === 'loading') {

@@ -49,6 +49,16 @@ public sealed class ZeusHostOptions
     public bool UseHttpsLanCert { get; init; } = true;
 
     /// <summary>
+    /// Desktop-mode LAN sharing. When true the HTTPS listener binds
+    /// <c>ListenAnyIP</c> even though <see cref="BindAllInterfaces"/> is false,
+    /// so the Photino webview keeps its loopback HTTP socket while phones /
+    /// laptops on the same LAN can reach the SPA at <c>https://&lt;lan-ip&gt;:6443</c>.
+    /// Ignored when <see cref="BindAllInterfaces"/> is already true (server mode
+    /// covers that case).
+    /// </summary>
+    public bool ShareOverLan { get; init; }
+
+    /// <summary>
     /// Print the multi-line startup banner to stdout. Service mode = true (the
     /// console window is the operator-facing UI). Desktop mode = false (Photino
     /// is the UI; the console is hidden anyway).

@@ -75,6 +75,21 @@ internal sealed class NativeAudioSink : IRxAudioSink, IHostedService, IDisposabl
     private MiniAudioOutput? _output;
     private bool _disposed;
 
+    // Mute flag for the Photino-side Mute/Unmute button. Read on the DSP
+    // tick thread inside Publish, written from the REST request thread —
+    // volatile is the right tool. On mute we drain the ring so unmute
+    // doesn't replay ~1 s of stale audio; the miniaudio device stays
+    // open either way so there's no pop and no fight with the OS mixer.
+    private volatile bool _muted;
+
+    public bool IsMuted => _muted;
+
+    public void SetMuted(bool muted)
+    {
+        _muted = muted;
+        if (muted) _ring.Clear();
+    }
+
     // Diagnostics — accessed from the audio worker thread; volatile / interlocked
     // suffices since they're write-only there and read-only on the timer thread.
     private long _underrunSamples;
@@ -131,6 +146,12 @@ internal sealed class NativeAudioSink : IRxAudioSink, IHostedService, IDisposabl
 
     public void Publish(in AudioFrame frame)
     {
+        // Muted at the door: don't enqueue and let the ring drain to silence
+        // on the playback callback's underrun path. Cheaper than gating in
+        // the audio worker thread and avoids any sample-rate / channel-count
+        // negotiation with the producer.
+        if (_muted) return;
+
         // The DSP tick produces mono float32 @ 48 kHz. We assert the format
         // softly: anything else is logged and dropped rather than corrupting
         // the ring. (The format is set in DspPipelineService.AudioOutputRateHz

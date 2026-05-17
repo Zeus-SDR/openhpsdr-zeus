@@ -278,9 +278,17 @@ export function PullDownArc({
         <path
           d={`M ${ARC_X_LEFT} ${CY} A ${R} ${R} 0 0 1 ${ARC_X_RIGHT} ${CY}`}
           fill="none"
-          stroke="rgba(255,255,255,0.05)"
+          stroke="var(--immersive-arc-track-rim)"
           strokeWidth={11}
           strokeLinecap="round"
+        />
+        {/* track shadow — paired with the rim so the curve reads on both
+            dark and light chassis. Width 9 sits inside the 11-wide rim. */}
+        <path
+          d={`M ${ARC_X_LEFT} ${CY} A ${R} ${R} 0 0 1 ${ARC_X_RIGHT} ${CY}`}
+          fill="none"
+          stroke="var(--immersive-arc-track-shadow)"
+          strokeWidth={8}
         />
 
         {/* zone-transition ticks — coloured perpendicular lines at the

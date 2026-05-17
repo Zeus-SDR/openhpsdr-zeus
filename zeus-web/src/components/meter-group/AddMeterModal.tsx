@@ -126,7 +126,9 @@ export function AddMeterModal({
     if (draft.max !== def.defaultMax) settings.max = draft.max;
     if (draft.peakHold === false) settings.peakHold = false;
     onAdd(selectedId, draft.kind, settings);
-    onClose();
+    // Modal stays open after Add so the operator can drop several meters in
+    // one trip — the parent's `existingReadings` set updates on each commit,
+    // so the just-added card flips to "+ Add another" automatically.
   };
 
   const updateDraft = <K extends keyof DraftConfig>(

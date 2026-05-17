@@ -99,28 +99,34 @@ public static class ZeusHost
 
         // HTTPS bind for mobile-browser parity. Browsers refuse getUserMedia on a
         // non-secure context, which kills mic-uplink TX from any phone reaching
-        // the server by LAN IP. Desktop mode skips HTTPS entirely (Photino
-        // webview is same-origin localhost, no cert needed).
+        // the server by LAN IP. Plain desktop mode skips HTTPS entirely (Photino
+        // webview is same-origin localhost, no cert needed); desktop + ShareOverLan
+        // re-enables HTTPS on the LAN so a phone can pick up the session while the
+        // operator is away from the shack PC.
         var httpsPort = options.UseHttpsLanCert
             ? (options.HttpsPort > 0 ? options.HttpsPort : LanCertificate.GetHttpsPort())
             : 0;
         var lanCert = options.UseHttpsLanCert ? LanCertificate.GetOrCreate() : null;
+        var httpsAnyIp = options.BindAllInterfaces || options.ShareOverLan;
 
         builder.WebHost.ConfigureKestrel(k =>
         {
-            // BindAllInterfaces=true (service mode) makes the SPA + API reachable
-            // from other hosts on the LAN (doc 01 §Deployment: local single-user,
-            // same LAN as radio). Desktop mode (false) binds explicit loopback.
-            // Kestrel rejects ListenLocalhost(0) — use Listen(IPAddress.Loopback,
-            // 0) when we want an OS-assigned port for desktop mode.
+            // HTTP listener: BindAllInterfaces=true (service mode) reaches the
+            // SPA + API from other LAN hosts. Desktop mode (false) binds explicit
+            // loopback — Photino webview only. Kestrel rejects ListenLocalhost(0),
+            // so use Listen(IPAddress.Loopback, 0) for an OS-assigned loopback port.
             if (options.BindAllInterfaces)
                 k.ListenAnyIP(options.HttpPort);
             else
                 k.Listen(IPAddress.Loopback, options.HttpPort);
 
+            // HTTPS listener: decoupled from the HTTP listener so desktop +
+            // ShareOverLan keeps HTTP on loopback (Photino) while exposing HTTPS
+            // to the LAN (phone). Plain service mode hits the same ListenAnyIP
+            // branch as before the option was introduced.
             if (httpsPort > 0 && lanCert is not null)
             {
-                if (options.BindAllInterfaces)
+                if (httpsAnyIp)
                     k.ListenAnyIP(httpsPort, l => l.UseHttps(lanCert));
                 else
                     k.Listen(IPAddress.Loopback, httpsPort, l => l.UseHttps(lanCert));
@@ -177,13 +183,25 @@ public static class ZeusHost
             builder.Services.AddHostedService(sp =>
                 sp.GetRequiredService<NativeAudioSink>());
 
+            // ShareOverLan: also register the WebSocket sink so any LAN
+            // browser hitting https://<lan-ip>:6443 gets RX audio. The hub
+            // short-circuits on _clients.IsEmpty, so with zero LAN clients
+            // attached this is effectively a no-op (one virtual call + one
+            // atomic int read per AudioFrame).
+            if (options.ShareOverLan)
+            {
+                builder.Services.AddSingleton<IRxAudioSink, WebSocketAudioSink>();
+            }
+
             // Mic capture: replaces the browser → WS MicPcm uplink in
             // desktop mode. TxAudioIngest still subscribes to
-            // StreamingHub.MicPcmReceived (harmless — the SPA's mic worklet
-            // is disabled by Phase 2c, so no frames arrive), and
-            // NativeMicCapture feeds the same OnMicPcmBytes entry point
-            // directly so the WDSP TXA chain, IQ ring, and protocol
-            // packers don't see any difference between transports.
+            // StreamingHub.MicPcmReceived — with ShareOverLan on, that
+            // subscription becomes the live phone-mic path, so a paired
+            // phone can MOX and transmit. NativeMicCapture continues to
+            // feed OnMicPcmBytes directly for the shack-PC mic. Either
+            // source goes through the same TxAudioIngest entry point so
+            // WDSP / IQ ring / protocol packers don't see a transport
+            // difference.
             builder.Services.AddSingleton<NativeMicCapture>();
             builder.Services.AddHostedService(sp =>
                 sp.GetRequiredService<NativeMicCapture>());

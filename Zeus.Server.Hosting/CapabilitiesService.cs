@@ -10,14 +10,17 @@
 // system lands; the FeatureMatrix is kept as an empty record so callers
 // can rely on a stable JSON shape.
 
+using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.AspNetCore.Http;
 
 namespace Zeus.Server;
 
 public sealed class CapabilitiesService
 {
     private readonly CapabilitiesSnapshot _snapshot;
+    private readonly bool _shareOverLan;
 
     public CapabilitiesService(ZeusHostOptions options)
     {
@@ -34,9 +37,30 @@ public sealed class CapabilitiesService
             Architecture: architecture,
             Version: version,
             Features: new FeatureMatrix());
+
+        _shareOverLan = options.HostMode == ZeusHostMode.Desktop && options.ShareOverLan;
     }
 
     public CapabilitiesSnapshot Snapshot() => _snapshot;
+
+    /// <summary>
+    /// Per-request snapshot. When the host is desktop + ShareOverLan, the
+    /// captured "desktop" host string is overridden to "server" for non-loopback
+    /// requests so a LAN browser enables its WS audio decoder + mic uplink, while
+    /// the Photino webview (loopback) keeps "desktop" and the native miniaudio
+    /// path. Without this distinction Photino would double-play (miniaudio AND
+    /// the browser audio worklet) or LAN browsers would be silent.
+    /// </summary>
+    public CapabilitiesSnapshot Snapshot(HttpContext ctx)
+    {
+        if (!_shareOverLan) return _snapshot;
+
+        var local = ctx.Connection.LocalIpAddress;
+        var isLoopback = local is not null && IPAddress.IsLoopback(local);
+        if (isLoopback) return _snapshot;
+
+        return _snapshot with { Host = "server" };
+    }
 
     private static string DetectPlatform()
     {

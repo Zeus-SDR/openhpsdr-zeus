@@ -347,19 +347,20 @@ export function BigArc(props: BigArcProps) {
         {/* ambient ground glow — pale white over the warm-cream lamp wash */}
         <ellipse cx={CX} cy={135} rx={110} ry={40} fill={`url(#${glowGradId})`} />
 
-        {/* background arc — soft track */}
+        {/* background arc — soft track. Rim + inset shadow are tokenised
+            so the light theme can flip both to a steel-grey inset on the
+            silver chassis (white@6% on silver disappears at idle). */}
         <path
           d={`M 28 ${CY} A ${R} ${R} 0 0 1 212 ${CY}`}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
+          stroke="var(--immersive-arc-track-rim)"
           strokeWidth={14}
           strokeLinecap="round"
         />
-        {/* track shadow */}
         <path
           d={`M 28 ${CY} A ${R} ${R} 0 0 1 212 ${CY}`}
           fill="none"
-          stroke="rgba(0,0,0,0.4)"
+          stroke="var(--immersive-arc-track-shadow)"
           strokeWidth={10}
         />
 

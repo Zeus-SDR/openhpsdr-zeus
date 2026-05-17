@@ -99,9 +99,6 @@ export function MeterGroupPanel({
         ...(Object.keys(settings).length > 0 ? { settings } : {}),
       };
       commit({ ...config, widgets: [...config.widgets, widget] });
-      // Close the modal so the operator sees the new widget land in the
-      // group rather than peering at it from behind the modal scrim.
-      setLibraryOpen(false);
     },
     [commit, config],
   );

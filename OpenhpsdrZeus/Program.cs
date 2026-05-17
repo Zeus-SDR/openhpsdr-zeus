@@ -49,8 +49,11 @@ using Photino.NET;
 using Zeus.Server;
 
 // Single binary, two modes:
-//   OpenhpsdrZeus              → service mode (LAN bind, HTTPS, banner)
-//   OpenhpsdrZeus --desktop    → Photino shell (loopback only, no HTTPS, no banner)
+//   OpenhpsdrZeus              → service mode (LAN HTTP + HTTPS, console banner)
+//   OpenhpsdrZeus --desktop    → Photino shell (loopback HTTP for the webview,
+//                                 plus LAN HTTPS so a phone can pick up the
+//                                 session while the operator is away from the
+//                                 shack PC — see ShareOverLan)
 //
 // We use a classic `Main` (not top-level statements) so we can hang [STAThread]
 // off it — Photino on Windows wraps WebView2 (COM), and CoreWebView2 has to be
@@ -110,16 +113,21 @@ public partial class Program
         // Photino calls below stay on the main thread; Kestrel runs on its own
         // thread pool either way and is unaffected.
 
-        // Loopback-only, OS-assigned port, no LAN HTTPS, no console banner — the
-        // Photino webview is the only consumer. Picking port 0 lets the OS hand us
-        // a guaranteed-free port; we read it back from IServer after StartAsync so
-        // no TOCTOU race with a concurrent listener.
+        // Two listeners: loopback HTTP on an OS-assigned port (the Photino webview
+        // is the only consumer of this one — picking port 0 lets the OS hand us
+        // a guaranteed-free port; we read it back from IServer after StartAsync
+        // so there's no TOCTOU race with a concurrent listener), plus LAN HTTPS
+        // on :6443 with the existing self-signed cert so a phone or laptop on
+        // the same network can pick up the session while the operator is away
+        // from the shack PC. ShareOverLan=true is what decouples the two listener
+        // bindings inside ZeusHost — see the comment by Kestrel.ConfigureKestrel.
         var hostOptions = new ZeusHostOptions
         {
             HostMode = ZeusHostMode.Desktop,
             HttpPort = 0,
             BindAllInterfaces = false,
-            UseHttpsLanCert = false,
+            UseHttpsLanCert = true,
+            ShareOverLan = true,
             PrintConsoleBanner = false,
         };
 
@@ -127,16 +135,31 @@ public partial class Program
         ZeusHost.InitializeAsync(app).GetAwaiter().GetResult();
         app.StartAsync().GetAwaiter().GetResult();
 
-        // Resolve the bound URL after Start — Kestrel writes the OS-assigned port
-        // into IServerAddressesFeature here. Exactly one HTTP address because
-        // hostOptions.UseHttpsLanCert=false and BindAllInterfaces=false.
+        // Resolve the bound URLs after Start — Kestrel writes the OS-assigned
+        // loopback port (plus the LAN HTTPS port we configured) into
+        // IServerAddressesFeature here. Photino must load the loopback HTTP URL:
+        // pointing the webview at the LAN HTTPS URL would trip the self-signed
+        // cert's interstitial inside the embedded WebKit/WebView2, which has no
+        // UI to accept the warning.
         var addresses = app.Services.GetRequiredService<IServer>()
             .Features.Get<IServerAddressesFeature>()
             ?? throw new InvalidOperationException("Kestrel did not expose IServerAddressesFeature.");
-        var startUrl = addresses.Addresses.FirstOrDefault()
-            ?? throw new InvalidOperationException("Kestrel reported no listening addresses.");
+        var startUrl = addresses.Addresses
+            .FirstOrDefault(a => a.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException("Kestrel reported no loopback HTTP address.");
 
         Console.WriteLine($"OpenhpsdrZeus (desktop) hosting backend at {startUrl}");
+
+        // LAN URL surface for the "walk to the kitchen, pick up phone" flow.
+        // GetLanIps already filters to up + non-loopback interfaces, so the
+        // operator gets a copy-pasteable URL per NIC. If for some reason no LAN
+        // NIC is visible (offline laptop, ethernet down) we just skip this
+        // line — the Photino window still works.
+        var lanHttpsPort = LanCertificate.GetHttpsPort();
+        foreach (var ip in LanCertificate.GetLanIps())
+        {
+            Console.WriteLine($"OpenhpsdrZeus (desktop) LAN share: https://{ip}:{lanHttpsPort}");
+        }
 
         // SetUseOsDefaultLocation(false)+Center so first launch doesn't drop the
         // window in the corner. Title is the marketing name; we prefix "Openhpsdr"

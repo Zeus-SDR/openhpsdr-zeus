@@ -170,6 +170,14 @@
   --immersive-lamp-chip-text-glow: rgba(255,245,200,0.16);
   --immersive-lamp-active-glow: rgba(245,240,180,0.18);
 
+  /* Arc track strokes for BigArc / PullDownArc background curves. Tuned for
+     the dark stage: a white@6% outer rim sits behind a black@40% inset shadow.
+     Light theme overrides flip the polarity so the arc reads as a dark-rim
+     inset on the silver chassis (otherwise the white rim vanishes against
+     silver and the gauge looks empty at idle). */
+  --immersive-arc-track-rim:    rgba(255,255,255,0.06);
+  --immersive-arc-track-shadow: rgba(0,0,0,0.40);
+
   /* ----- Type — v3 Lifted Dark: Inter + JetBrains Mono ----- */
   --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
@@ -319,6 +327,12 @@ html[data-fonts="geist"] { --font-sans: 'Inter', sans-serif; --font-mono: 'JetBr
   --immersive-lamp-pin-glow:  rgba(12, 95, 156, 0.45);
   --immersive-lamp-hub-glow:  rgba(12, 95, 156, 0.50);
   --immersive-lamp-active-glow: rgba(12, 95, 156, 0.18);
+
+  /* Arc-track rim/shadow flipped to a steel-grey inset on the silver chassis
+     so BigArc / PullDownArc background curves remain legible at idle (the
+     dark-theme white rim vanishes here — see comment in :root). */
+  --immersive-arc-track-rim:    rgba(40, 45, 52, 0.18);
+  --immersive-arc-track-shadow: rgba(40, 45, 52, 0.42);
 }
 
 /* ===========================================================
