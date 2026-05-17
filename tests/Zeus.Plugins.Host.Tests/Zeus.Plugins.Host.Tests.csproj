@@ -23,6 +23,38 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Zeus.Plugins.Contracts\Zeus.Plugins.Contracts.csproj" />
     <ProjectReference Include="..\..\Zeus.Plugins.Host\Zeus.Plugins.Host.csproj" />
+
+    <!-- Build the sample plugins as a side-effect, but DO NOT pull their
+         output into our reference graph (the tests load them at runtime
+         via PluginManager). ReferenceOutputAssembly=false +
+         OutputItemType lets the CopySamplePlugins target below copy
+         their build output into bin/.../sample-plugins/{Name}/. -->
+    <ProjectReference Include="..\..\samples\plugins\HelloWorld\HelloWorld.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false" />
+    <ProjectReference Include="..\..\samples\plugins\Amplifier\Amplifier.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false" />
   </ItemGroup>
+
+  <Target Name="CopySamplePlugins" AfterTargets="Build">
+    <ItemGroup>
+      <SamplePluginFiles Include="$(MSBuildThisFileDirectory)..\..\samples\plugins\HelloWorld\bin\$(Configuration)\$(TargetFramework)\HelloWorld.dll">
+        <SubDir>HelloWorld</SubDir>
+      </SamplePluginFiles>
+      <SamplePluginFiles Include="$(MSBuildThisFileDirectory)..\..\samples\plugins\HelloWorld\plugin.json">
+        <SubDir>HelloWorld</SubDir>
+      </SamplePluginFiles>
+      <SamplePluginFiles Include="$(MSBuildThisFileDirectory)..\..\samples\plugins\Amplifier\bin\$(Configuration)\$(TargetFramework)\Amplifier.dll">
+        <SubDir>Amplifier</SubDir>
+      </SamplePluginFiles>
+      <SamplePluginFiles Include="$(MSBuildThisFileDirectory)..\..\samples\plugins\Amplifier\plugin.json">
+        <SubDir>Amplifier</SubDir>
+      </SamplePluginFiles>
+    </ItemGroup>
+    <Copy SourceFiles="@(SamplePluginFiles)"
+          DestinationFolder="$(OutDir)sample-plugins\%(SubDir)\"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

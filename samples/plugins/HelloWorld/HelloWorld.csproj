@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>HelloWorld</AssemblyName>
+    <RootNamespace>Openhpsdr.Zeus.Samples.HelloWorld</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <!-- Don't propagate Zeus.Plugins.Contracts into our output dir; the
+         host already owns that assembly, and copying it produces ALC
+         double-load surprises during integration tests. -->
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Zeus.Plugins.Contracts\Zeus.Plugins.Contracts.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

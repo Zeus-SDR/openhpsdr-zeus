@@ -12,6 +12,10 @@
   <Project Path="Zeus.Dsp/Zeus.Dsp.csproj" />
   <Project Path="Zeus.Plugins.Contracts/Zeus.Plugins.Contracts.csproj" />
   <Project Path="Zeus.Plugins.Host/Zeus.Plugins.Host.csproj" />
+  <Folder Name="/samples/">
+    <Project Path="samples/plugins/Amplifier/Amplifier.csproj" />
+    <Project Path="samples/plugins/HelloWorld/HelloWorld.csproj" />
+  </Folder>
   <Project Path="Zeus.Protocol1/Zeus.Protocol1.csproj" />
   <Project Path="Zeus.Protocol2/Zeus.Protocol2.csproj" />
   <Project Path="OpenhpsdrZeus/OpenhpsdrZeus.csproj" />

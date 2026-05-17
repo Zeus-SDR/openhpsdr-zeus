@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "com.openhpsdr.zeus.samples.amplifier",
+  "name": "Amplifier Control (sample)",
+  "version": "1.0.0",
+  "author": "Brian Keating (EI6LF)",
+  "description": "Synthetic external-amplifier monitor + control. Replace state with your hardware driver to ship a real plugin.",
+  "homepage": "https://github.com/brianbruff/openhpsdr-zeus",
+  "license": "GPL-2.0-or-later",
+  "sdk": { "abi": 1, "minVersion": "1.0.0" },
+  "entrypoint": {
+    "assembly": "Amplifier.dll",
+    "type": "Openhpsdr.Zeus.Samples.Amplifier.AmplifierPlugin"
+  },
+  "capabilities": ["ReadRadioState"],
+  "ui": {
+    "modules": ["ui/amplifier.es.js"],
+    "panels": [
+      {
+        "id": "amplifier.main",
+        "title": "Amplifier",
+        "icon": "Zap",
+        "slot": "workspace.amplifier"
+      }
+    ]
+  }
+}

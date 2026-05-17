@@ -51,7 +51,8 @@ public sealed class PluginManager : IHostedService, IAsyncDisposable
             return;
         }
 
-        var root = PluginRoot.EnsureExists();
+        var root = _options.PluginRoot ?? PluginRoot.EnsureExists();
+        if (!Directory.Exists(root)) Directory.CreateDirectory(root);
         _log.LogInformation("Plugin root: {Root}", root);
 
         var pluginDirs = Directory.EnumerateDirectories(root)
@@ -183,6 +184,14 @@ public sealed record PluginManagerOptions
     public TimeSpan InitTimeout { get; init; } = TimeSpan.FromSeconds(10);
     public TimeSpan ShutdownTimeout { get; init; } = TimeSpan.FromSeconds(5);
     public bool SafeMode { get; init; } = false;
+
+    /// <summary>
+    /// Override the plugin discovery root. Null (default) defers to
+    /// <see cref="PluginRoot.Get"/>. Setting this explicitly lets tests
+    /// run in parallel without fighting over the process-global
+    /// <c>ZEUS_PLUGINS_PATH</c> env var.
+    /// </summary>
+    public string? PluginRoot { get; init; }
 }
 
 /// <summary>Runtime state for one currently-active plugin.</summary>

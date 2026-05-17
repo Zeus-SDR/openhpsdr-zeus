@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "com.openhpsdr.zeus.samples.helloworld",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "author": "Brian Keating (EI6LF)",
+  "description": "Smallest possible Openhpsdr-Zeus plugin: logs a hello on activation.",
+  "homepage": "https://github.com/brianbruff/openhpsdr-zeus",
+  "license": "GPL-2.0-or-later",
+  "sdk": { "abi": 1, "minVersion": "1.0.0" },
+  "entrypoint": {
+    "assembly": "HelloWorld.dll",
+    "type": "Openhpsdr.Zeus.Samples.HelloWorld.HelloWorldPlugin"
+  }
+}

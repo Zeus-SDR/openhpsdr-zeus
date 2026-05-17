@@ -9,7 +9,6 @@ public class PluginManagerTests : IDisposable
 {
     private readonly string _root;
     private readonly string _dbPath;
-    private readonly string _prevEnv;
     private readonly PluginSettingsStore _store;
     private readonly PluginManager _manager;
 
@@ -36,8 +35,6 @@ public class PluginManagerTests : IDisposable
     {
         _root = Path.Combine(Path.GetTempPath(), "zeus-plugin-mgr-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_root);
-        _prevEnv = Environment.GetEnvironmentVariable(PluginRoot.EnvVar) ?? "";
-        Environment.SetEnvironmentVariable(PluginRoot.EnvVar, _root);
 
         _dbPath = Path.Combine(_root, "settings.db");
         _store = new PluginSettingsStore(_dbPath);
@@ -47,13 +44,13 @@ public class PluginManagerTests : IDisposable
             loader: loader,
             settings: _store,
             services: new ServiceCollection().BuildServiceProvider(),
-            logFactory: NullLoggerFactory.Instance);
+            logFactory: NullLoggerFactory.Instance,
+            options: new PluginManagerOptions { PluginRoot = _root });
     }
 
     public void Dispose()
     {
         _manager.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        Environment.SetEnvironmentVariable(PluginRoot.EnvVar, _prevEnv);
         try { Directory.Delete(_root, recursive: true); } catch { /* ignore */ }
     }
 
@@ -127,7 +124,7 @@ public class PluginManagerTests : IDisposable
             settings: _store,
             services: new ServiceCollection().BuildServiceProvider(),
             logFactory: NullLoggerFactory.Instance,
-            options: new PluginManagerOptions { SafeMode = true });
+            options: new PluginManagerOptions { SafeMode = true, PluginRoot = _root });
 
         await safe.StartAsync(default);
         Assert.Empty(safe.Active);
