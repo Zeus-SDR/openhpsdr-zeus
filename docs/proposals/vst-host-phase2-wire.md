@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-05-17** by docs/proposals/plugin-system-v2.md. The sidecar approach is being replaced by in-process audio plugin hosting under a unified plugin SDK.
+
 # VST Plugin Host — Phase 2 / 3a IPC Wire Spec
 
 Status: pinned (Phase 3a additions)

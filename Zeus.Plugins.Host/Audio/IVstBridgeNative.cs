@@ -1,0 +1,65 @@
+namespace Zeus.Plugins.Host.Audio;
+
+/// <summary>
+/// Seam between <see cref="VstHostAudioPlugin"/> and the native VST3
+/// bridge. The production implementation P/Invokes
+/// <c>libzeus-vst-bridge</c> (see <c>native/zeus-vst-bridge/</c>);
+/// tests substitute a fake to avoid linking the native lib in CI.
+///
+/// All methods return a non-zero status on failure; 0 means OK. The
+/// underlying C ABI lives in <c>native/zeus-vst-bridge/include/zvst.h</c>.
+/// </summary>
+public interface IVstBridgeNative
+{
+    /// <summary>Initialise the bridge. <paramref name="abi"/> MUST equal
+    /// <see cref="VstBridgeAbi.Current"/>; the native lib refuses
+    /// otherwise so a wire-format mismatch surfaces immediately.</summary>
+    int Init(int abi);
+
+    /// <summary>Load a VST3 file. On success, <paramref name="handle"/>
+    /// is set to a non-zero opaque value; returns 0. Other status codes
+    /// match <c>zvst_status_t</c>.</summary>
+    int LoadVst3(string path, int channels, int sampleRate, int blockSize, out nint handle);
+
+    /// <summary>Process one block. <paramref name="input"/> and
+    /// <paramref name="output"/> are planar float32 buffers of length
+    /// <c>channels * frames</c>.</summary>
+    int Process(nint handle, ReadOnlySpan<float> input, Span<float> output, int frames);
+
+    /// <summary>Set one normalized [0..1] parameter on the loaded plugin.</summary>
+    int SetParameter(nint handle, uint paramId, double normalized);
+
+    /// <summary>Release the loaded plugin. The handle is invalid afterwards.</summary>
+    int Unload(nint handle);
+
+    /// <summary>Shutdown the bridge — releases process-wide resources.</summary>
+    int Shutdown();
+}
+
+/// <summary>
+/// Status codes returned by <see cref="IVstBridgeNative"/>. Mirror
+/// <c>zvst_status_t</c> in <c>native/zeus-vst-bridge/include/zvst.h</c>.
+/// </summary>
+public static class VstBridgeStatus
+{
+    public const int Ok                  = 0;
+    public const int AbiMismatch         = 1;
+    public const int FileNotFound        = 2;
+    public const int NotAVst3            = 3;
+    public const int NoAudioEffectClass  = 4;
+    public const int ActivateFailed      = 5;
+    public const int InvalidHandle       = 6;
+    public const int InvalidArguments    = 7;
+    public const int NotImplemented      = 8;
+    public const int Other               = 255;
+}
+
+/// <summary>
+/// Native bridge ABI version. Bumped in lockstep with breaking changes
+/// to the C ABI in <c>zvst.h</c>. Independent of the .NET plugin SDK
+/// ABI in <see cref="Zeus.Plugins.Contracts.AbiVersion"/>.
+/// </summary>
+public static class VstBridgeAbi
+{
+    public const int Current = 1;
+}

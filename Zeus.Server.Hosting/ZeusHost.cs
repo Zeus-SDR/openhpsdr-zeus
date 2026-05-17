@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Zeus.Contracts;
 using Zeus.Dsp.Wdsp;
-using Zeus.PluginHost;
+using Zeus.Plugins.Host;
 using Zeus.Protocol1;
 using Zeus.Protocol1.Discovery;
 using Zeus.Server.Tci;
@@ -279,24 +279,24 @@ public static class ZeusHost
         builder.Services.AddSingleton<Rf2kService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<Rf2kService>());
 
-        // VST plugin-host (Wave 6a). PluginHostManager owns the sidecar
-        // lifecycle; VstHostHostedService bridges it to the WDSP TX-mic seam,
-        // LiteDB persistence, REST surface (/api/plughost/*), and the
-        // SignalR-style VstHostEvent broadcasts. Sidecar is launched lazily
-        // — VstHostHostedService.StartAsync only starts it when the persisted
-        // master flag is true.
-        builder.Services.AddZeusPluginHost();
-        builder.Services.AddSingleton<IVstChainPersistence, LiteDbVstChainPersistence>();
-        builder.Services.AddSingleton<VstHostHostedService>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<VstHostHostedService>());
-
         // Capabilities snapshot for /api/capabilities. Captures host-mode,
-        // platform, and feature gates (currently just vstHost) once at
-        // construction. The frontend uses this to hide unsupported UI
-        // (e.g. TX Audio Tools tab on macOS/Windows where the C++ sidecar
-        // binary isn't shipped yet).
+        // platform, and version info once at construction. The frontend
+        // queries this on connect to surface host metadata.
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton<CapabilitiesService>();
+
+        // Plugin system v2 (docs/proposals/plugin-system-v2.md). PluginManager
+        // is registered as IHostedService so plugin discovery / activation
+        // runs as part of normal app startup; plugin REST endpoints are
+        // mounted below via PluginEndpoints.MapAll under /api/plugins/...
+        builder.Services.AddZeusPlugins(prefsDbPathProvider: PrefsDbPath.Get);
+
+        // AudioPluginBridge wires PluginManager's audio-bearing plugins
+        // into WdspDspEngine's realtime TX seam. No-op when no plugins
+        // declare an audio component; subscribes to engine swaps so it
+        // survives a Synthetic→WDSP transition mid-session.
+        builder.Services.AddSingleton<AudioPluginBridge>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<AudioPluginBridge>());
 
         // TCI (Transceiver Control Interface) — ExpertSDR3-compatible WebSocket server
         // for remote control by loggers (Log4OM, N1MM+), digital-mode apps (JTDX, WSJT-X),
@@ -398,6 +398,8 @@ public static class ZeusHost
         }
 
         app.MapZeusEndpoints();
+        Zeus.Plugins.Host.PluginEndpoints.MapAll(app,
+            app.Services.GetRequiredService<Zeus.Plugins.Host.PluginManager>());
 
         // Optional startup banner — service mode prints to its console window
         // (operator-facing UI), desktop mode hides the console and skips this.

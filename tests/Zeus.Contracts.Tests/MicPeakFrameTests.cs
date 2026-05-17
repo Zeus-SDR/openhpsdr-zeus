@@ -63,9 +63,10 @@ public class MicPeakFrameTests
     [Fact]
     public void MsgType_MicPeak_Is0x1D()
     {
-        // Lock the wire-format byte assignment: 0x1A VstHostEvent, 0x1B
-        // BandPlanChanged, 0x1C MoxState are taken; 0x1D is the next free
-        // slot above the 0x1x server→client telemetry block. (0x20 is the
+        // Lock the wire-format byte assignment: 0x1A reserved (formerly the
+        // drifted VstHostEvent), 0x1B BandPlanChanged, 0x1C MoxState are
+        // taken; 0x1D is the next free slot above the 0x1x server→client
+        // telemetry block. (0x20 is the
         // client→server MicPcm uplink — a different direction, deliberately
         // separate.) Originally 0x1C on the audio-native branch; renumbered
         // on merge with develop to resolve the collision with MoxState.

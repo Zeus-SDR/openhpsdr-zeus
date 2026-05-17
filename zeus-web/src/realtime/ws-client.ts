@@ -52,7 +52,6 @@ import { hasActiveFrameConsumers, useDisplayStore } from '../state/display-store
 import { useTxStore } from '../state/tx-store';
 import { useBandPlanStore } from '../state/bandPlan';
 import { useRxMetersStore } from '../state/rx-meters-store';
-import { useVstHostStore } from '../state/vst-host-store';
 import { warnOnce } from '../util/logger';
 import { wsUrl as buildWsUrl } from '../serverUrl';
 
@@ -125,15 +124,9 @@ const MOX_STATE_BYTES = 3;
 export const MSG_TYPE_WISDOM_STATUS = 0x15;
 const WISDOM_STATUS_MIN_BYTES = 1 + 1;
 
-// VST host event (issue #106 / Wave 6a). 1 type byte + UTF-8 colon-delimited
-// payload, max 256 event bytes (Zeus.Contracts/VstHostEventFrame.cs).
-// Payload tags emitted by VstHostHostedService:
-//   snapshot, slotEditorClosed:N, slotEditorResized:N:W:H,
-//   slotStateChanged:N, chainEnabledChanged:0|1,
-//   parameterChanged:N:ID:VAL, sidecarExited:CODE.
-// All routed into useVstHostStore.applyEvent which decides whether to
-// re-fetch state, patch a slot, or surface a notice.
-export const MSG_TYPE_VST_HOST_EVENT = 0x1a;
+// 0x1a — reserved. Previously VstHostEvent on the drifted plugin-host
+// branch; left as a wire-gap so a stale frontend build can't accidentally
+// decode whatever lands at this slot next.
 
 // Mic uplink (client → server). Payload: 960 × f32le = 3840 bytes preceded by
 // the 1-byte type, total 3841 bytes. 960 samples = 20 ms @ 48 kHz mono.
@@ -403,18 +396,6 @@ export function startRealtime(path = '/ws'): () => void {
           const store = useConnectionStore.getState();
           store.setWisdomPhase(phase);
           store.setWisdomStatus(status);
-          return;
-        }
-        if (peekType === MSG_TYPE_VST_HOST_EVENT) {
-          // Bytes 1..end are the UTF-8 event tag (e.g. "slotStateChanged:3").
-          // Frame may be just the type byte (empty tag); guard accordingly.
-          const tag =
-            ev.data.byteLength > 1
-              ? new TextDecoder('utf-8').decode(new Uint8Array(ev.data, 1))
-              : '';
-          if (tag.length > 0) {
-            useVstHostStore.getState().applyEvent(tag);
-          }
           return;
         }
         if (peekType === MSG_TYPE_ALERT) {

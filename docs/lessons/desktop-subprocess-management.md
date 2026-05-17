@@ -270,5 +270,4 @@ Before sending signals, we check if the process exists with `kill -0 "$SERVER_PI
 
 - `Zeus.Desktop/Program.cs` — In-process backend hosting
 - `Zeus.Server/Program.cs` — Signal handlers for graceful shutdown
-- `Zeus.PluginHost/Native/SidecarProcess.cs` — Subprocess management for VST plugin host
 - `docs/lessons/wdsp-init-gotchas.md` — DSP initialization ordering

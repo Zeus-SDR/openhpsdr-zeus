@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// SettingsView — verify the TX Audio Tools tab is always present and that
-// the VST host submenu inside it is gated by /api/capabilities. CFC is
-// WDSP-driven and must remain visible regardless of the sidecar.
+// SettingsView — verify the TX Audio Tools tab is always present. CFC is
+// WDSP-driven and must remain visible.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
@@ -16,23 +15,17 @@ import {
   type BoardCapabilities,
 } from '../api/board-capabilities';
 
-function seed(vstAvailable: boolean) {
+function seed() {
   useCapabilitiesStore.setState({
     loaded: true,
     inflight: false,
     loadError: null,
     capabilities: {
       host: 'server',
-      platform: vstAvailable ? 'linux' : 'darwin',
+      platform: 'linux',
       architecture: 'x64',
       version: 'test',
-      features: {
-        vstHost: {
-          available: vstAvailable,
-          reason: vstAvailable ? null : 'unsupported',
-          sidecarPath: vstAvailable ? '/x' : null,
-        },
-      },
+      features: {},
     },
     localToServer: false,
   });
@@ -66,7 +59,7 @@ describe('SettingsView — TX Audio Tools', () => {
   });
 
   it('always renders the TX AUDIO TOOLS tab', () => {
-    seed(false);
+    seed();
     act(() => {
       root.render(<SettingsView onClose={() => {}} />);
     });
@@ -76,22 +69,12 @@ describe('SettingsView — TX Audio Tools', () => {
     expect(tabs).toContain('TX AUDIO TOOLS');
   });
 
-  it('shows CFC and the VST host submenu when vstHost.available is true', () => {
-    seed(true);
+  it('shows CFC inside the TX Audio Tools tab', () => {
+    seed();
     act(() => {
       root.render(<SettingsView onClose={() => {}} initialTab="tx-audio" />);
     });
     expect(container.textContent).toContain('Continuous Frequency Compressor');
-    expect(container.textContent).toContain('VST Host');
-  });
-
-  it('shows CFC but hides the VST host submenu when vstHost.available is false', () => {
-    seed(false);
-    act(() => {
-      root.render(<SettingsView onClose={() => {}} initialTab="tx-audio" />);
-    });
-    expect(container.textContent).toContain('Continuous Frequency Compressor');
-    expect(container.textContent).not.toContain('VST Host');
   });
 });
 
@@ -103,7 +86,7 @@ describe('SettingsView — RADIO tab gating', () => {
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
-    seed(false);
+    seed();
   });
 
   afterEach(() => {

@@ -1,0 +1,3 @@
+[submodule "native/zeus-vst-bridge/third_party/vst3sdk"]
+	path = native/zeus-vst-bridge/third_party/vst3sdk
+	url = https://github.com/steinbergmedia/vst3sdk.git

@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+    <!-- Pin to 10.0.0 to match what Zeus.Plugins.Contracts.dll links
+         against from the shared framework. Otherwise NuGet restore
+         resolves a transitive 9.0.0 (via test infra packages) and
+         drops it into bin/, where Roslyn picks it ahead of the
+         shared-framework copy and Contracts.dll fails to link
+         (CS1705 version mismatch). -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Zeus.Plugins.Contracts\Zeus.Plugins.Contracts.csproj" />
+    <ProjectReference Include="..\..\Zeus.Plugins.Host\Zeus.Plugins.Host.csproj" />
+  </ItemGroup>
+
+  <!-- Copy the native VST3 bridge into the test output dir if a local
+       build exists. The bridge is not built by dotnet; operators run
+       cmake under native/zeus-vst-bridge/ once, then re-run dotnet test.
+       VstBridgeNativeRealTests.cs skips gracefully when absent. -->
+  <Target Name="CopyVstBridgeDylib" AfterTargets="Build">
+    <ItemGroup>
+      <BridgeMac Include="$(MSBuildThisFileDirectory)..\..\native\zeus-vst-bridge\build\libzeus-vst-bridge.dylib" />
+      <BridgeLinux Include="$(MSBuildThisFileDirectory)..\..\native\zeus-vst-bridge\build\libzeus-vst-bridge.so" />
+      <BridgeWin Include="$(MSBuildThisFileDirectory)..\..\native\zeus-vst-bridge\build\Release\zeus-vst-bridge.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(BridgeMac)"   DestinationFolder="$(OutDir)" Condition="Exists('%(BridgeMac.FullPath)')"   SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BridgeLinux)" DestinationFolder="$(OutDir)" Condition="Exists('%(BridgeLinux.FullPath)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BridgeWin)"   DestinationFolder="$(OutDir)" Condition="Exists('%(BridgeWin.FullPath)')"   SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

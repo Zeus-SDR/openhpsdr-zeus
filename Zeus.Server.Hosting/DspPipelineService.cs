@@ -374,9 +374,7 @@ public class DspPipelineService : BackgroundService,
     public virtual IDspEngine? CurrentEngine => Volatile.Read(ref _engine);
 
     /// <summary>Raised after the engine instance is swapped (Synthetic ↔ WDSP).
-    /// VstHostHostedService subscribes and re-installs its chain handler on
-    /// the new engine. Subscribers receive the new <see cref="IDspEngine"/>
-    /// (never null).</summary>
+    /// Subscribers receive the new <see cref="IDspEngine"/> (never null).</summary>
     public event Action<IDspEngine>? EngineChanged;
 
     private void RaiseEngineChanged(IDspEngine engine)
