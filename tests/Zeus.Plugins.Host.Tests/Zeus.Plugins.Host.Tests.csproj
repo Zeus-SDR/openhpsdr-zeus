@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,6 +56,21 @@
     <Copy SourceFiles="@(SamplePluginFiles)"
           DestinationFolder="$(OutDir)sample-plugins\%(SubDir)\"
           SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Copy the native VST3 bridge into the test output dir if a local
+       build exists. The bridge is not built by dotnet; operators run
+       cmake under native/zeus-vst-bridge/ once, then re-run dotnet test.
+       VstBridgeNativeRealTests.cs skips gracefully when absent. -->
+  <Target Name="CopyVstBridgeDylib" AfterTargets="Build">
+    <ItemGroup>
+      <BridgeMac Include="$(MSBuildThisFileDirectory)..\..\native\zeus-vst-bridge\build\libzeus-vst-bridge.dylib" />
+      <BridgeLinux Include="$(MSBuildThisFileDirectory)..\..\native\zeus-vst-bridge\build\libzeus-vst-bridge.so" />
+      <BridgeWin Include="$(MSBuildThisFileDirectory)..\..\native\zeus-vst-bridge\build\Release\zeus-vst-bridge.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(BridgeMac)"   DestinationFolder="$(OutDir)" Condition="Exists('%(BridgeMac.FullPath)')"   SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BridgeLinux)" DestinationFolder="$(OutDir)" Condition="Exists('%(BridgeLinux.FullPath)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BridgeWin)"   DestinationFolder="$(OutDir)" Condition="Exists('%(BridgeWin.FullPath)')"   SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

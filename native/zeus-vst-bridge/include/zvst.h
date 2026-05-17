@@ -15,6 +15,18 @@
 
 #include <stdint.h>
 
+/* Export the C ABI. The shared library is compiled with hidden
+ * default visibility on Unix to keep vst3sdk's internals out of the
+ * dylib's exported-symbol table; each entry point below is then
+ * re-exported explicitly. Windows uses __declspec(dllexport). */
+#if defined(_WIN32) || defined(__CYGWIN__)
+#  define ZVST_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) || defined(__clang__)
+#  define ZVST_EXPORT __attribute__((visibility("default")))
+#else
+#  define ZVST_EXPORT
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -44,7 +56,7 @@ typedef void* zvst_handle_t;
  * ZVST_ABI_MISMATCH otherwise. Idempotent: safe to call multiple times
  * from independent loaders.
  */
-int32_t zvst_init(int32_t abi);
+ZVST_EXPORT int32_t zvst_init(int32_t abi);
 
 /*
  * Load a VST3 plugin from `path` and prepare it to process audio at
@@ -58,7 +70,7 @@ int32_t zvst_init(int32_t abi);
  *
  * The handle is owned by the bridge until zvst_unload is called.
  */
-int32_t zvst_load_vst3(
+ZVST_EXPORT int32_t zvst_load_vst3(
     const char* path,
     int32_t channels,
     int32_t sample_rate,
@@ -75,7 +87,7 @@ int32_t zvst_load_vst3(
  * perform IO. If the plugin internally violates this contract, the
  * operator sees a glitch but the host stays up.
  */
-int32_t zvst_process(
+ZVST_EXPORT int32_t zvst_process(
     zvst_handle_t handle,
     const float* input,
     float* output,
@@ -86,7 +98,7 @@ int32_t zvst_process(
  * bridge). Safe to call from the control thread; the VST3 controller
  * is required by spec to be reentrant relative to the audio thread.
  */
-int32_t zvst_set_param(
+ZVST_EXPORT int32_t zvst_set_param(
     zvst_handle_t handle,
     uint32_t param_id,
     double normalized);
@@ -95,13 +107,13 @@ int32_t zvst_set_param(
  * Release the loaded plugin. The handle is invalid after this call.
  * Idempotent on a NULL handle (returns ZVST_OK).
  */
-int32_t zvst_unload(zvst_handle_t handle);
+ZVST_EXPORT int32_t zvst_unload(zvst_handle_t handle);
 
 /*
  * Release any process-wide bridge resources. Safe to call multiple
  * times; matched call counting against zvst_init.
  */
-int32_t zvst_shutdown(void);
+ZVST_EXPORT int32_t zvst_shutdown(void);
 
 #ifdef __cplusplus
 }
