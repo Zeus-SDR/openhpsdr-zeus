@@ -231,4 +231,4 @@ Authors who want to skip the registry can ship a direct URL and instruct operato
 - `docs/plugins/capabilities.md` — what each capability gates
 - `docs/plugins/audio-plugins.md` — `IAudioPlugin` deep dive
 - `docs/plugins/registry.md` — registry contract and PR flow
-- `samples/plugins/HelloWorld/` and `samples/plugins/Amplifier/` — working examples in the Zeus repo
+- [`Kb2uka/openhpsdr-zeus-plugins/samples/`](https://github.com/Kb2uka/openhpsdr-zeus-plugins/tree/main/samples) — `HelloWorld` and `Amplifier` reference implementations in the plugin registry repo
