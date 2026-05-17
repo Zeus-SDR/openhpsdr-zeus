@@ -149,6 +149,11 @@ public sealed class RadioStateEntry
     public bool AutoAgcEnabled { get; set; }
     public double RxAfGainDb { get; set; }
     public int ZoomLevel { get; set; } = 1;
+    // Drive slider % (0..100). Default 0 mirrors RadioService._drivePct seed.
+    public int DrivePct { get; set; }
+    // TUN drive slider % (0..100). Default 10 mirrors RadioService._tunePct seed —
+    // a 0 default would make pressing TUN appear to do nothing.
+    public int TunePct { get; set; } = 10;
     // Per-mode-family RX filter memory (abs values, always positive)
     public int SsbFilterLoAbs { get; set; } = 150;
     public int SsbFilterHiAbs { get; set; } = 2850;

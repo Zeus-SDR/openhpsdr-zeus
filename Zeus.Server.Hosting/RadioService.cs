@@ -238,6 +238,8 @@ public sealed class RadioService : IDisposable
             _amTxFilter = new(rsSnap.AmTxFilterLoAbs, rsSnap.AmTxFilterHiAbs);
             _fmTxFilter = new(rsSnap.FmTxFilterLoAbs, rsSnap.FmTxFilterHiAbs);
             _cwTxFilter = new(rsSnap.CwTxFilterLoAbs, rsSnap.CwTxFilterHiAbs);
+            _drivePct = Math.Clamp(rsSnap.DrivePct, 0, 100);
+            _tunePct = Math.Clamp(rsSnap.TunePct, 0, 100);
         }
 
         _state = new(
@@ -1003,6 +1005,7 @@ public sealed class RadioService : IDisposable
     {
         int clamped = Math.Clamp(percent, 0, 100);
         Interlocked.Exchange(ref _drivePct, clamped);
+        _stateDirty = true;
         RecomputePaAndPush();
     }
 
@@ -1012,6 +1015,7 @@ public sealed class RadioService : IDisposable
     {
         int clamped = Math.Clamp(percent, 0, 100);
         Interlocked.Exchange(ref _tunePct, clamped);
+        _stateDirty = true;
         RecomputePaAndPush();
     }
 
@@ -1582,6 +1586,8 @@ public sealed class RadioService : IDisposable
                 AmTxFilterLoAbs = amTx.LoAbs,   AmTxFilterHiAbs = amTx.HiAbs,
                 FmTxFilterLoAbs = fmTx.LoAbs,   FmTxFilterHiAbs = fmTx.HiAbs,
                 CwTxFilterLoAbs = cwTx.LoAbs,   CwTxFilterHiAbs = cwTx.HiAbs,
+                DrivePct = Volatile.Read(ref _drivePct),
+                TunePct = Volatile.Read(ref _tunePct),
                 UpdatedUtc = DateTime.UtcNow,
             });
         }

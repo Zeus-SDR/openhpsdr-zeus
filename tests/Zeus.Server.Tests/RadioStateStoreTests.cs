@@ -64,6 +64,8 @@ public class RadioStateStoreTests : IDisposable
                 SsbFilterLoAbs = 300, SsbFilterHiAbs = 2400,
                 CwFilterLoAbs = 400, CwFilterHiAbs = 800,
                 SsbTxFilterLoAbs = 300, SsbTxFilterHiAbs = 2400,
+                DrivePct = 47,
+                TunePct = 23,
                 UpdatedUtc = DateTime.UtcNow,
             });
         }
@@ -90,6 +92,19 @@ public class RadioStateStoreTests : IDisposable
         Assert.Equal(800, got.CwFilterHiAbs);
         Assert.Equal(300, got.SsbTxFilterLoAbs);
         Assert.Equal(2400, got.SsbTxFilterHiAbs);
+        Assert.Equal(47, got.DrivePct);
+        Assert.Equal(23, got.TunePct);
+    }
+
+    // Older rows written before DrivePct/TunePct existed must hydrate with the
+    // RadioService seed defaults (0, 10) so operators upgrading from an earlier
+    // build don't see a 0 % TUN drive that appears to do nothing on first key.
+    [Fact]
+    public void DrivePctAndTunePct_HaveCorrectDefaults_OnNewEntry()
+    {
+        var entry = new RadioStateEntry();
+        Assert.Equal(0, entry.DrivePct);
+        Assert.Equal(10, entry.TunePct);
     }
 
     // Snapshot is a single global row — saving twice should update, not insert.
