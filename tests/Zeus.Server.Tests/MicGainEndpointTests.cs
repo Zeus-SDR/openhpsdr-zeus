@@ -208,8 +208,6 @@ public class MicGainEndpointTests : IClassFixture<MicGainEndpointTests.Factory>
         public void SavePsCorrection(string path) { }
         public void RestorePsCorrection(string path) { }
         public void SetCfcConfig(CfcConfig cfg) { }
-        public bool ProcessRxVstChain(Span<float> audio, int frames, int sampleRateHz) => false;
-        public bool ProcessTxMicVstChain(Span<float> audio, int frames, int sampleRateHz) => false;
         public void SetTxMonitorEnabled(bool enabled) { }
         public int ReadTxMonitorAudio(Span<float> output) => 0;
         public bool IsTxMonitorOn => false;

@@ -202,12 +202,6 @@ public sealed class SyntheticDspEngine : IDspEngine
             throw new ArgumentException($"Bands must have exactly 10 entries; got {cfg.Bands.Length}", nameof(cfg));
     }
 
-    // VST plugin-host seam — synthetic engine has no plugin chain wired and
-    // never will. Both methods return false unconditionally so callers take
-    // the bypass path and use the original buffer with zero overhead.
-    public bool ProcessRxVstChain(Span<float> audio, int frames, int sampleRateHz) => false;
-    public bool ProcessTxMicVstChain(Span<float> audio, int frames, int sampleRateHz) => false;
-
     // TX Monitor — synthetic has no TXA / RXA, no IQ to demodulate. Toggle is
     // a no-op; ReadTxMonitorAudio always returns 0 so the audio-broadcast
     // path falls through to the regular RX AudioFrame.

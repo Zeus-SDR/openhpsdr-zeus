@@ -10,7 +10,7 @@
 // and ignore writes. The gating for whether the panel is visible at all
 // lives one layer up in `BoardCapabilities.hasHl2OptionalToggles`.
 //
-// Pattern mirrors pa-store / vst-host-store: optimistic local update on
+// Pattern mirrors pa-store: optimistic local update on
 // toggle with a rollback on server error; an inflight flag for the panel
 // to show a "saving…" indicator while the PUT is in flight.
 

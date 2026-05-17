@@ -104,18 +104,9 @@ public enum MsgType : byte
     // flight for older clients (e.g. SMeterLive) — 0x19 is purely additive.
     RxMetersV2 = 0x19,
 
-    // VST plugin-host event. UTF-8 text payload carrying a small notification
-    // tag that the browser maps to a /api/plughost/state re-fetch (e.g.
-    // "snapshot", "slotEditorClosed:0", "slotStateChanged:2",
-    // "chainEnabledChanged:1", "parameterChanged:0:42:0.500000",
-    // "sidecarExited:1"). Plain string keeps the format flexible while
-    // Wave 6b figures out exactly what the UI wants to consume; the browser
-    // can split on ':' to extract slot index / value. Sent from
-    // VstHostHostedService via StreamingHub.BroadcastVstHostEvent.
-    // Originally assigned 0x19 on the VST-Experimental branch; renumbered to
-    // 0x1A on merge to release/0.6.0-alpha to resolve the collision with
-    // RxMetersV2 above.
-    VstHostEvent = 0x1A,
+    // 0x1A — reserved (previously VstHostEvent on the drifted plugin-host
+    // branch). Left as a gap rather than reassigned to avoid colliding with
+    // any zeus-web build that hasn't been refreshed yet.
 
     // Server → client (band plan changed). Broadcast when the active region
     // changes or the operator edits the plan. Payload: [type:1][regionIdUtf8…].

@@ -8,15 +8,10 @@
 export type ZeusHostMode = 'desktop' | 'server';
 export type ZeusPlatform = 'linux' | 'darwin' | 'windows' | 'unknown';
 
-export type FeatureGate = {
-  available: boolean;
-  reason: string | null;
-  sidecarPath: string | null;
-};
-
-export type CapabilitiesFeatures = {
-  vstHost: FeatureGate;
-};
+// Feature-gate fields will return as the new plugin system lands. Today
+// the matrix is empty — kept as a stable shape so callers can read
+// `capabilities.features` without runtime guards.
+export type CapabilitiesFeatures = Record<string, never>;
 
 export type Capabilities = {
   host: ZeusHostMode;
@@ -29,9 +24,6 @@ export type Capabilities = {
 function asString(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback;
 }
-function asBool(v: unknown, fallback = false): boolean {
-  return typeof v === 'boolean' ? v : fallback;
-}
 
 function parseHostMode(v: unknown): ZeusHostMode {
   return v === 'desktop' ? 'desktop' : 'server';
@@ -42,26 +34,14 @@ function parsePlatform(v: unknown): ZeusPlatform {
   return 'unknown';
 }
 
-function parseGate(raw: unknown): FeatureGate {
-  const o = (raw ?? {}) as Record<string, unknown>;
-  return {
-    available: asBool(o.available),
-    reason: typeof o.reason === 'string' ? o.reason : null,
-    sidecarPath: typeof o.sidecarPath === 'string' ? o.sidecarPath : null,
-  };
-}
-
 export function parseCapabilities(raw: unknown): Capabilities {
   const o = (raw ?? {}) as Record<string, unknown>;
-  const features = (o.features ?? {}) as Record<string, unknown>;
   return {
     host: parseHostMode(o.host),
     platform: parsePlatform(o.platform),
     architecture: asString(o.architecture, 'unknown'),
     version: asString(o.version, 'unknown'),
-    features: {
-      vstHost: parseGate(features.vstHost),
-    },
+    features: {} as CapabilitiesFeatures,
   };
 }
 

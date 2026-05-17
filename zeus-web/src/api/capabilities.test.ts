@@ -11,26 +11,20 @@ describe('parseCapabilities', () => {
       platform: 'linux',
       architecture: 'x64',
       version: '0.6.0-alpha',
-      features: {
-        vstHost: {
-          available: true,
-          reason: null,
-          sidecarPath: '/opt/zeus-plughost',
-        },
-      },
+      features: {},
     });
     expect(caps.host).toBe('desktop');
     expect(caps.platform).toBe('linux');
-    expect(caps.features.vstHost.available).toBe(true);
-    expect(caps.features.vstHost.sidecarPath).toBe('/opt/zeus-plughost');
+    expect(caps.architecture).toBe('x64');
+    expect(caps.version).toBe('0.6.0-alpha');
   });
 
   it('falls back to safe defaults on garbage input', () => {
     const caps = parseCapabilities({});
     expect(caps.host).toBe('server');
     expect(caps.platform).toBe('unknown');
-    expect(caps.features.vstHost.available).toBe(false);
-    expect(caps.features.vstHost.reason).toBeNull();
+    expect(caps.architecture).toBe('unknown');
+    expect(caps.version).toBe('unknown');
   });
 
   it('clamps unknown host strings to "server"', () => {

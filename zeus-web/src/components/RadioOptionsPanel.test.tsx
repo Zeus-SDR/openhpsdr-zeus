@@ -6,7 +6,7 @@
 //
 // RadioOptionsPanel — checkbox renders, toggles, calls PUT with the right
 // body, surfaces the caption text. Fetch mocked with vi.stubGlobal to
-// match the pattern other panel tests use (see vst-host-store.test.ts).
+// match the pattern other panel tests use.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';

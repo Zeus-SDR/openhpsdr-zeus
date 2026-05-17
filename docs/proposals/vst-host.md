@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-05-17** by docs/proposals/plugin-system-v2.md. The sidecar approach is being replaced by in-process audio plugin hosting under a unified plugin SDK.
+
 # Zeus VST / Plugin Host — Architecture Decision Record
 
 Status: accepted (Phase 1 in progress)

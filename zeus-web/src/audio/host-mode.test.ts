@@ -24,7 +24,7 @@ function setHost(host: 'server' | 'desktop' | null) {
       platform: 'darwin',
       architecture: 'arm64',
       version: '0.0.0-test',
-      features: { vstHost: { available: false, reason: 't', sidecarPath: null } },
+      features: {},
     } as never,
   });
 }

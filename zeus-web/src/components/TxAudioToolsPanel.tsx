@@ -14,21 +14,13 @@
 // statement and per-component attribution.
 
 import { CfcSettingsPanel } from './CfcSettingsPanel';
-import { VstHostSubmenu } from './VstHostSubmenu';
-import { useCapabilitiesStore } from '../state/capabilities-store';
 
-// CFC is WDSP-driven and always available. The VST host submenu is gated
-// on the zeus-plughost sidecar (today: Linux only) — when unavailable we
-// hide the submenu rather than the whole tab, so CFC stays reachable.
+// CFC is WDSP-driven and always available. The plugin extension point
+// will reattach here once the rebuilt plugin system lands.
 export function TxAudioToolsPanel() {
-  const vstHostAvailable = useCapabilitiesStore(
-    (s) => s.capabilities?.features.vstHost.available ?? false,
-  );
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <CfcSettingsPanel />
-
-      {vstHostAvailable && <VstHostSubmenu />}
     </div>
   );
 }

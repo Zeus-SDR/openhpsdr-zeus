@@ -67,13 +67,7 @@ describe('useCapabilitiesStore', () => {
         platform: 'linux',
         architecture: 'x64',
         version: '0.6.0',
-        features: {
-          vstHost: {
-            available: true,
-            reason: null,
-            sidecarPath: '/usr/local/bin/zeus-plughost',
-          },
-        },
+        features: {},
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -82,7 +76,6 @@ describe('useCapabilitiesStore', () => {
     const s = useCapabilitiesStore.getState();
     expect(s.loaded).toBe(true);
     expect(s.capabilities?.host).toBe('desktop');
-    expect(s.capabilities?.features.vstHost.available).toBe(true);
     // Desktop host always = local regardless of browser hostname.
     expect(s.localToServer).toBe(true);
   });
@@ -95,9 +88,7 @@ describe('useCapabilitiesStore', () => {
         platform: 'linux',
         architecture: 'x64',
         version: '0.6.0',
-        features: {
-          vstHost: { available: true, reason: null, sidecarPath: '/x' },
-        },
+        features: {},
       }),
     );
     vi.stubGlobal('fetch', fetchMock);

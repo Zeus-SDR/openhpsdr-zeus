@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-05-17** by docs/proposals/plugin-system-v2.md.
+
 # PRD — Plugins System Architecture
 
 **Status:** Draft (2026-04-28) — Architectural proposal for maintainer review
