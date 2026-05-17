@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Openhpsdr.Zeus.Plugins.Contracts</PackageId>
+    <Description>Public surface for Openhpsdr-Zeus plugins. Reference from plugin projects.</Description>
+    <Authors>Brian Keating (EI6LF) and contributors</Authors>
+    <PackageLicenseExpression>GPL-2.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/brianbruff/openhpsdr-zeus</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

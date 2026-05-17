@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/brianbruff/openhpsdr-zeus/main/docs/plugins/plugin.schema.json",
+  "title": "Openhpsdr-Zeus plugin manifest",
+  "description": "Schema for plugin.json. SchemaVersion 1 is the only version recognised by SDK ABI 1.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "version", "sdk", "entrypoint"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.]*[a-z0-9]$",
+      "description": "Reverse-DNS plugin id, e.g. com.example.amplifier"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+([+-][0-9A-Za-z.-]+)?$"
+    },
+    "author": { "type": "string" },
+    "description": { "type": "string" },
+    "homepage": { "type": "string", "format": "uri" },
+    "license": { "type": "string" },
+    "sdk": {
+      "type": "object",
+      "required": ["abi", "minVersion"],
+      "properties": {
+        "abi": { "type": "integer", "minimum": 1 },
+        "minVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      }
+    },
+    "entrypoint": {
+      "type": "object",
+      "required": ["assembly"],
+      "properties": {
+        "assembly": { "type": "string", "pattern": "\\.dll$" },
+        "type": { "type": ["string", "null"] }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "ReadRadioState",
+          "ControlRadio",
+          "AudioStream",
+          "NetworkAccess",
+          "FileSystemRead",
+          "FileSystemWrite",
+          "PersistSettings"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "network": { "type": "boolean" },
+        "fileSystemRead": { "type": "boolean" },
+        "fileSystemWrite": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "ui": {
+      "type": ["object", "null"],
+      "properties": {
+        "modules": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "panels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "slot"],
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "icon": { "type": "string" },
+              "slot": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "audio": {
+      "type": ["object", "null"],
+      "properties": {
+        "vst3Path": { "type": ["string", "null"] },
+        "slot": {
+          "type": "string",
+          "enum": ["tx.post-leveler", "tx.pre-cfc", "rx.post-demod"]
+        },
+        "channels": { "type": "integer", "enum": [1, 2] },
+        "sampleRate": { "type": "integer", "enum": [44100, 48000, 88200, 96000] }
+      }
+    }
+  }
+}
