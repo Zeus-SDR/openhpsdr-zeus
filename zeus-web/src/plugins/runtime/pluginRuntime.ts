@@ -20,6 +20,11 @@ export interface RegisteredPluginPanel {
   title: string;
   icon: string;
   category: string;
+  // Manifest's panel slot — e.g. "workspace.amplifier" for an Add-Panel
+  // tile, "tx-audio-tools.chain" for a TX audio-chain block. Consumers
+  // filter on this when rendering plugin contributions into a specific
+  // surface (the chain panel below CFC, for instance).
+  slot: string;
   component: ComponentType;
 }
 
@@ -89,6 +94,7 @@ async function loadOne(plugin: PluginDto): Promise<void> {
       title: meta.title,
       icon: meta.icon,
       category: meta.category,
+      slot: meta.slot,
       component,
     });
   }
