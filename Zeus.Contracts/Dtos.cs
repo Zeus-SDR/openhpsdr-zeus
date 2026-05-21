@@ -254,7 +254,24 @@ public sealed record StateDto(
     // Independent TUN drive slider 0..100. Same persistence pattern as
     // DrivePct. Default 10 mirrors RadioService._tunePct seed — a 0 default
     // would make pressing TUN appear to do nothing on first key.
-    int TunePct = 10);
+    int TunePct = 10,
+
+    // ---- CTUN (Click-Tune) — issue #427 ----
+    // When CtunEnabled is false (default), VfoHz drives both the radio's
+    // hardware NCO and the panadapter centre — clicking the spectrum retunes
+    // the radio. When true, the hardware NCO is frozen at RadioLoHz and
+    // clicking only moves VfoHz around within the displayed bandwidth; WDSP's
+    // RX bandpass is shifted by (VfoHz - RadioLoHz) so the audio still
+    // resolves the operator's tuned signal. Mirrors Thetis chkFWCATU /
+    // ClickTuneDisplay (console.cs:43143-43170, 10857-10867).
+    bool CtunEnabled = false,
+    // Hardware NCO frequency in Hz. Tracks VfoHz when CTUN is OFF; frozen at
+    // the value VfoHz had when CTUN was toggled ON. RadioService is
+    // authoritative; persisted to LiteDB so the radio re-tunes to the same
+    // hardware centre on reconnect when CTUN was on. Zero on a fresh server
+    // before the first state hydration; RadioService snaps it to VfoHz at
+    // construction so the displayed centre is never zero.
+    long RadioLoHz = 0);
 
 public sealed record RadioInfo(
     string MacAddress,
@@ -277,6 +294,8 @@ public sealed record ConnectRequest(
     byte? BoardId = null);
 
 public sealed record VfoSetRequest(long Hz);
+
+public sealed record CtunSetRequest(bool Enabled);
 
 public sealed record ModeSetRequest(RxMode Mode);
 
@@ -420,13 +439,22 @@ public sealed record SetActiveLayoutRequest(string RadioKey, string LayoutId);
 // AutoOcMask is informational only — the read-only N2ADR board mask the
 // firmware will OR onto OcRx/OcTx when HasN2adr is on (HL2). PUT requests
 // ignore it; the server recomputes from the connected board on the next GET.
+//
+// OcDxTx / OcDxRx are 4-bit masks (bits 0..3 -> DX OUT 7..10) for the
+// Anvelina-PRO3-only "Open Collector DX" extension (USEROUT7..10), wire-
+// encoded into Protocol-2 high-priority byte 1397 bits [4:1]. Per EU2AV's
+// Open_Collector_Anvelina_DX spec (issue #407). Honoured by the wire path
+// only when the connected board is OrionMkII + AnvelinaPro3 variant on
+// Protocol 2; persisted on every band so DX wiring travels with the band.
 public sealed record PaBandSettingsDto(
     string Band,
     double PaGainDb = 0.0,
     bool DisablePa = false,
     byte OcTx = 0,
     byte OcRx = 0,
-    byte AutoOcMask = 0);
+    byte AutoOcMask = 0,
+    byte OcDxTx = 0,
+    byte OcDxRx = 0);
 
 // Globals shared across bands. PaMaxPowerWatts=0 disables the watts
 // conversion path and falls back to the legacy "drive% = raw 0-255 byte"

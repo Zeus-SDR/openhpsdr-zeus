@@ -126,6 +126,13 @@ public class DspPipelineService : BackgroundService,
     private RxMode _appliedMode = RxMode.USB;
     private int _appliedLowHz;
     private int _appliedHighHz;
+    // CTUN bandpass shift currently applied to the WDSP RX filter (Hz). Equals
+    // (EffectiveLoHz(VfoHz) - RadioLoHz) when CtunEnabled, 0 otherwise. The
+    // filter low/high pushed to WDSP is the operator-set passband + this
+    // offset. Tracked separately from FilterLowHz/HighHz so re-pushing the
+    // filter when CTUN moves the dial doesn't require Mutate-ing the StateDto.
+    // Issue #427.
+    private int _appliedCtunOffsetHz;
     private int _appliedTxLowHz;
     private int _appliedTxHighHz;
     private double _appliedAgcTopDb;
@@ -497,8 +504,14 @@ public class DspPipelineService : BackgroundService,
         // ActiveClient is null for P2 connections, so the radio never learns
         // about tune changes without this forward. Sample rate / mode follow
         // here too when P2-side support is added.
+        //
+        // CTUN — issue #427. When CTUN is on the hardware NCO is frozen at
+        // RadioLoHz: every state change must push that frozen value (not the
+        // operator's roaming dial) so dial movements stay confined to the
+        // WDSP filter-shift path and don't physically retune the radio.
         var p2 = _p2Client;
-        p2?.SetVfoAHz(CwOffset.EffectiveLoHz(s));
+        long p2TargetHz = s.CtunEnabled ? s.RadioLoHz : CwOffset.EffectiveLoHz(s);
+        p2?.SetVfoAHz(p2TargetHz);
 
         // iter5 pass-2: lock-free engine pointer read. The lock previously
         // here only provided pointer atomicity (the engine.* calls below
@@ -523,6 +536,22 @@ public class DspPipelineService : BackgroundService,
             engine.SetFilter(channel, s.FilterLowHz, s.FilterHighHz);
             _appliedLowHz = s.FilterLowHz;
             _appliedHighHz = s.FilterHighHz;
+        }
+        // CTUN frequency shift — issue #427. When CtunEnabled, the operator's
+        // dial sits off-centre on the WDSP IF (the radio's NCO is frozen at
+        // RadioLoHz). WDSP's `shift` stage moves the IF by shiftHz before
+        // demodulation, so the unmodified bandpass filter sees the tuned
+        // signal at baseband. Disabled (shiftHz=0) when CtunEnabled is false,
+        // which collapses to legacy behaviour. This is the seam Thetis uses
+        // (radio.cs:1419-1420); shifting SetRXABandpassFreqs directly broke
+        // SSB demod because the nbp0 stage rejects sign-inverted ranges.
+        int ctunShiftHz = s.CtunEnabled
+            ? (int)(CwOffset.EffectiveLoHz(s.Mode, s.VfoHz) - s.RadioLoHz)
+            : 0;
+        if (ctunShiftHz != _appliedCtunOffsetHz)
+        {
+            engine.SetCtunShift(channel, ctunShiftHz);
+            _appliedCtunOffsetHz = ctunShiftHz;
         }
         if (s.TxFilterLowHz != _appliedTxLowHz || s.TxFilterHighHz != _appliedTxHighHz)
         {
@@ -660,8 +689,26 @@ public class DspPipelineService : BackgroundService,
             {
                 _p2Client?.SetPsFeedbackEnabled(true);
                 p1Active?.SetPsEnabled(true);
-                try { Task.Delay(100).Wait(); } catch { /* ignore */ }
-                engine.SetPsEnabled(true);
+                // PS engine arm requires a feedback path that delivers paired
+                // samples. On P2 ANAN-class that's SetPsFeedbackEnabled above.
+                // On P1, only HermesLite2 delivers the 2-DDC paired layout
+                // PS needs — Protocol1Client.cs:643 (NumReceiversMinusOne
+                // wire bump) and :1004 (4-DDC parser path) are both HL2-gated.
+                // On a non-HL2 P1 board WDSP arms with no possible feedback
+                // source, sits in COLLECT waiting on paired samples that
+                // never arrive, and the blocking 100 ms settle below stacks
+                // on the state-change thread — together that freezes RX
+                // audio + waterfall (GH #426). Skip the engine arm in that
+                // case; the wire calls above are no-ops on non-HL2 P1
+                // (board-gated in WriteAttenuatorPayload + SnapshotState).
+                bool p1Connected = p1Active is not null;
+                bool psEngineSupported = !p1Connected
+                    || _radio.ConnectedBoardKind == HpsdrBoardKind.HermesLite2;
+                if (psEngineSupported)
+                {
+                    try { Task.Delay(100).Wait(); } catch { /* ignore */ }
+                    engine.SetPsEnabled(true);
+                }
             }
             else
             {
@@ -790,6 +837,14 @@ public class DspPipelineService : BackgroundService,
         engine.SetFilter(channelId, s.FilterLowHz, s.FilterHighHz);
         engine.SetTxFilter(s.TxFilterLowHz, s.TxFilterHighHz);
         engine.SetVfoHz(channelId, s.VfoHz);
+        // Replay any CTUN shift on fresh-channel open so a connect landing
+        // with CtunEnabled already true (persisted across restart) is
+        // demodulating the same dial the operator saw last session.
+        // Issue #427.
+        int ctunShiftHz = s.CtunEnabled
+            ? (int)(CwOffset.EffectiveLoHz(s.Mode, s.VfoHz) - s.RadioLoHz)
+            : 0;
+        engine.SetCtunShift(channelId, ctunShiftHz);
         double effectiveAgc = s.AgcTopDb + s.AgcOffsetDb;
         engine.SetAgcTop(channelId, effectiveAgc);
         engine.SetRxAfGainDb(channelId, s.RxAfGainDb);
@@ -798,6 +853,7 @@ public class DspPipelineService : BackgroundService,
         _appliedMode = s.Mode;
         _appliedLowHz = s.FilterLowHz;
         _appliedHighHz = s.FilterHighHz;
+        _appliedCtunOffsetHz = ctunShiftHz;
         _appliedTxLowHz = s.TxFilterLowHz;
         _appliedTxHighHz = s.TxFilterHighHz;
         _appliedAgcTopDb = s.AgcTopDb;
@@ -872,6 +928,12 @@ public class DspPipelineService : BackgroundService,
         // (Hermes-on-P2 48 kHz IQ gain correction; future per-board branches)
         // are gated correctly. boardKind == Unknown leaves all quirks off.
         client.SetBoardKind(boardKind);
+        // 0x0A wire-byte alias variant (issue #218). For non-OrionMkII
+        // boards the value is ignored; for OrionMkII it picks the right
+        // calibration/PA constants AND unlocks the Anvelina-PRO3 DX OC
+        // byte-1397 write (issue #407) when the operator has selected
+        // AnvelinaPro3 in the radio chooser.
+        client.SetOrionMkIIVariant(_radio.EffectiveOrionMkIIVariant);
         await client.ConnectAsync(radioEndpoint, ct).ConfigureAwait(false);
         // Seed the operator's RX front-end (preamp + step attenuator) BEFORE
         // StartAsync so the very first CmdHighPriority emitted inside the
@@ -998,6 +1060,11 @@ public class DspPipelineService : BackgroundService,
         if (p2 is null) return;
         p2.SetDriveByte(snap.DriveByte);
         p2.SetOcMasks(snap.OcTxMask, snap.OcRxMask);
+        // Anvelina-PRO3 DX OC masks (#407). Always forwarded; Protocol2Client
+        // gates whether they hit byte 1397 on the wire by checking the
+        // connected board+variant. Non-Anvelina P2 boards see byte 1397
+        // stay at zero per EU2AV's reserved-bit rule.
+        p2.SetOcDxMasks(snap.OcDxTxMask, snap.OcDxRxMask);
         p2.SetPaEnabled(snap.PaEnabled);
     }
 
@@ -1465,7 +1532,15 @@ public class DspPipelineService : BackgroundService,
             // extra contract field needed, per task #7 scope note.
             int zoomLevel = Math.Max(1, state.ZoomLevel);
             float hzPerPixel = (float)((double)sampleRate / zoomLevel / Width);
-            long centerHz = CwOffset.EffectiveLoHz(state);
+            // Panadapter centre = the radio's actual NCO. When CTUN is off this
+            // equals EffectiveLoHz(dial) (legacy behaviour). When CTUN is on the
+            // hardware is frozen at RadioLoHz while the dial roams, so the
+            // pan/waterfall must not follow the dial — they stay anchored to
+            // RadioLoHz so the spectrum doesn't slide under the operator on
+            // every click. Issue #427.
+            long centerHz = state.CtunEnabled
+                ? state.RadioLoHz
+                : CwOffset.EffectiveLoHz(state);
 
             // Cache for the frequency-calibration service (issue #325). The
             // cal reads from this cache to avoid racing for WDSP's "fresh

@@ -92,9 +92,16 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
     // sets `receiver[i].ddc = i` (not `i + 2` as for Orion/Angelia/MkII).
     private const int HermesRxDdc = 0;
 
-    // 2^32 / 122_880_000 — converts Hz to a 32-bit phase-increment word
-    // when the general packet is in "send phase word" mode (bit 3 of
-    // CmdGeneral[37], which pihpsdr and Thetis both set).
+    // 2^32 / 122_880_000 — converts Hz to a 32-bit phase-increment word.
+    // The HPSDR Protocol-2 receiver mixers always operate on phase-word
+    // input: the upstream HDL wires the host-supplied 32-bit phase
+    // straight into the receiver cores (see `C122_phase_word` in
+    // `Hermes.v:1135` and `Hermes.v:1284`, identical pattern in
+    // `Orion.v`). The "bit 3 of CmdGeneral[37]" mode-select pihpsdr and
+    // Thetis both set has no decoder in `General_CC.v` (and no
+    // secondary decoder elsewhere in `Hermes.v` / `Orion.v` —
+    // verified). Kept for parity with pihpsdr; this constant is the
+    // unconditional Hz→phase scale. Issue #416.
     private const double HzToPhase = 34.952533333333333;
 
     private readonly ILogger<Protocol2Client> _log;
@@ -121,11 +128,39 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
     // ~29 dB hotter at 48 kHz than at higher rates — deskhpsdr
     // src/new_protocol.c:2516-2530). Unknown == no correction applied.
     private HpsdrBoardKind _boardKind = HpsdrBoardKind.Unknown;
+    // 0x0A wire-byte alias variant. Default G2 matches the pre-#218 Zeus
+    // assumption for every Saturn-class board; flipped to AnvelinaPro3 by
+    // DspPipelineService (issue #407) when the operator (or discovery)
+    // identifies the radio as Anvelina-PRO3, which unlocks the byte-1397
+    // DX OC write in SendCmdHighPriority. Read-only outside the variant
+    // setter.
+    private OrionMkIIVariant _variant = OrionMkIIVariant.G2;
     // Mercury preamp defaults OFF — on a G2 the ADC has enough dynamic range
     // that the preamp is a crutch, not a default. Operator enables it when
     // needed via the UI. Attenuator 0 dB so the front-end isn't knocked down.
     private bool _preampOn;
     private byte _rxStepAttnDb;
+    // DLE_outputs byte (`High_Priority_CC.v:195` on Orion_MkII, byte 1400).
+    // Drives three physical control lines on ANAN-8000DLE / AnvelinaPro3
+    // chassis (`Orion.v:2119,2122,2125`):
+    //   bit 0 = XVTR_enable        (0=disabled, 1=enabled)
+    //   bit 1 = IO1                (0=enabled,  1=muted)  — inverted polarity
+    //   bit 2 = AUTO_TUNE          (0=disabled, 1=enabled)
+    // Defaults 0 (current effective state — Zeus has been leaving the byte
+    // zeroed since the buffer is `new byte[BufLen]`). Use SetXvtrEnabled /
+    // SetIo1Muted / SetAutoTuneEnabled to compose. Hermes RTL doesn't
+    // decode byte 1400, so emission is harmless on non-Orion_MkII boards.
+    // On non-8000DLE Orion_MkII variants (G2, G2 MkII) the pins exist but
+    // typically drive unconnected hardware. Variant-aware gating is a
+    // separable follow-up. Issue #414.
+    private byte _dleOutputs;
+    // Second ADC step attenuator (0..31 dB) for ADC1 — bytes the upstream
+    // HDL decodes at `High_Priority_CC.v:186-189` as `Attenuator1`. Used
+    // by operators running dual-RX on dual-ADC boards (Orion_MkII, G2,
+    // Saturn) where RX0/RX1 sit on separate ADCs and need independent
+    // gain. Default 0 dB matches the radio's power-on state; no UI surface
+    // yet, but the wire byte is in place. Issue #415.
+    private byte _rx1StepAttnDb;
     // TX step attenuator (0..31 dB) — Thetis network.c:1238-1242 writes the
     // same value to bytes 57/58/59 of CmdTx (one per ADC tap). The PS
     // auto-attenuate loop adjusts this when info[4] feedback level lands
@@ -143,6 +178,14 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
     private byte _driveByte;
     private byte _ocTxMask;
     private byte _ocRxMask;
+    // Anvelina-PRO3 DX OC extension (issue #407, EU2AV
+    // Open_Collector_Anvelina_DX spec). 4-bit masks (bits 0..3 -> DX OUT
+    // 7..10). Wire-encoded into CmdHighPriority[1397] bits [4:1] only when
+    // _boardKind == OrionMkII && _variant == AnvelinaPro3 — every other
+    // board sees byte 1397 stay at 0, which is what the EU2AV spec calls
+    // out as the reserved-bit safe default for non-Anvelina firmware.
+    private byte _ocDxTxMask;
+    private byte _ocDxRxMask;
     private bool _moxOn;
     private bool _tuneActive;
     private long _totalFrames;
@@ -413,6 +456,21 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// 0x0A wire-byte alias variant (issue #218). Pushed from
+    /// <c>DspPipelineService.ConnectP2Async</c> alongside
+    /// <see cref="SetBoardKind"/>. Only consulted when
+    /// <c>_boardKind == OrionMkII</c>; ignored otherwise. Selecting
+    /// <see cref="OrionMkIIVariant.AnvelinaPro3"/> unlocks the byte 1397
+    /// DX OC write in <see cref="SendCmdHighPriority"/> for the EU2AV
+    /// Anvelina-PRO3 extension (issue #407).
+    /// </summary>
+    public void SetOrionMkIIVariant(OrionMkIIVariant variant)
+    {
+        _variant = variant;
+        if (_rxTask is not null) SendCmdHighPriority(run: true);
+    }
+
+    /// <summary>
     /// Per-board, per-sample-rate gain correction applied on top of the
     /// int24→[-1,+1] normalisation in <c>HandleDdcPacket</c>.
     ///
@@ -462,6 +520,58 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
         if (_rxTask is not null) SendCmdHighPriority(run: true);
     }
 
+    /// <summary>
+    /// Enable / disable the XVTR control line on ANAN-8000DLE / Anvelina
+    /// chassis (`DLE_outputs[0]` per `Orion.v:2119`). Other boards / variants:
+    /// no observable effect (Hermes doesn't decode byte 1400; non-8000DLE
+    /// Orion_MkII variants leave the pin unconnected).
+    /// </summary>
+    public void SetXvtrEnabled(bool enabled)
+    {
+        _dleOutputs = enabled
+            ? (byte)(_dleOutputs | 0x01)
+            : (byte)(_dleOutputs & ~0x01);
+        if (_rxTask is not null) SendCmdHighPriority(run: true);
+    }
+
+    /// <summary>
+    /// Mute / unmute the IO1 control line on ANAN-8000DLE / Anvelina
+    /// chassis (`DLE_outputs[1]` per `Orion.v:2122`). Polarity is inverted:
+    /// the RTL comment is "low to enable, high to mute" — `muted=true` sets
+    /// the bit.
+    /// </summary>
+    public void SetIo1Muted(bool muted)
+    {
+        _dleOutputs = muted
+            ? (byte)(_dleOutputs | 0x02)
+            : (byte)(_dleOutputs & ~0x02);
+        if (_rxTask is not null) SendCmdHighPriority(run: true);
+    }
+
+    /// <summary>
+    /// Enable / disable AUTO_TUNE on ANAN-8000DLE / Anvelina chassis
+    /// (`DLE_outputs[2]` per `Orion.v:2125`).
+    /// </summary>
+    public void SetAutoTuneEnabled(bool enabled)
+    {
+        _dleOutputs = enabled
+            ? (byte)(_dleOutputs | 0x04)
+            : (byte)(_dleOutputs & ~0x04);
+        if (_rxTask is not null) SendCmdHighPriority(run: true);
+    }
+
+    /// <summary>
+    /// Set the second-ADC RX step attenuator (0..31 dB), written to byte
+    /// 1442 of the High Priority Command (`Attenuator1` per
+    /// `High_Priority_CC.v:186-189`). Used for dual-RX dual-ADC boards
+    /// where RX1 sits on a separate ADC and needs independent gain.
+    /// </summary>
+    public void SetRx1Attenuator(int db)
+    {
+        _rx1StepAttnDb = (byte)Math.Clamp(db, 0, 31);
+        if (_rxTask is not null) SendCmdHighPriority(run: true);
+    }
+
     public void SetDriveByte(byte value)
     {
         _driveByte = value;
@@ -472,6 +582,21 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
     {
         _ocTxMask = (byte)(txMask & 0x7F);
         _ocRxMask = (byte)(rxMask & 0x7F);
+        if (_rxTask is not null) SendCmdHighPriority(run: true);
+    }
+
+    /// <summary>
+    /// Anvelina-PRO3 DX OC masks (issue #407, EU2AV
+    /// Open_Collector_Anvelina_DX spec). 4-bit masks: bit 0 = DX OUT 7,
+    /// bit 1 = DX OUT 8, bit 2 = DX OUT 9, bit 3 = DX OUT 10. Narrowed
+    /// to 0x0F on entry so spurious upper bits can't drift into the
+    /// reserved [7:5] field on the wire. Stored unconditionally; the
+    /// wire-encode in <see cref="SendCmdHighPriority"/> is the gate.
+    /// </summary>
+    public void SetOcDxMasks(byte txMask, byte rxMask)
+    {
+        _ocDxTxMask = (byte)(txMask & 0x0F);
+        _ocDxRxMask = (byte)(rxMask & 0x0F);
         if (_rxTask is not null) SendCmdHighPriority(run: true);
     }
 
@@ -700,11 +825,21 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
         p[26] = 16;
         p[27] = 0;
         p[28] = 32;
-        // Matches pihpsdr new_protocol_general for ORION2/SATURN hardware:
-        // [37] bit 3 = phase-word mode (radio reads phase increments at the
-        // DDC-frequency offsets, not raw Hz), [38] = hardware-timer enable,
-        // [58] = PA enable, [59] = Alex0|Alex1 enable (0x03 is required on
-        // MkII for the BPF board to honour the alex bits further down).
+        // Matches pihpsdr new_protocol_general for ORION2/SATURN hardware.
+        //
+        // [37] = 0x08: pihpsdr writes this on ORION2/SATURN. The upstream
+        // HDL `General_CC.v:136-140` (Hermes Protocol-2 v10.7 and
+        // Orion_MkII v2.2.10) only decodes `cmd_data[0]` at byte 37
+        // (Time_stamp/VITA_49/VNA — all driven from the same bit). Bit 3
+        // is NOT read by `General_CC.v`, and the radio is already in
+        // phase-word mode by default — `Hermes.v` / `Orion.v` wire the
+        // host-supplied 32-bit phase word straight into the receiver
+        // mixers (see `C122_phase_word` in Hermes.v line 1135 and 1284).
+        // Kept at 0x08 for parity with pihpsdr; no observable effect on
+        // this gateware revision. Issue #416.
+        //
+        // [38] = 0x01: hardware-timer enable (`HW_timer_enable`, decoded
+        // at `General_CC.v:141`).
         p[37] = 0x08;
         p[38] = 0x01;
         // [58] bit 0 = PA enable (piHPSDR `new_protocol.c:658-677`; Thetis
@@ -1015,11 +1150,39 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
         byte ocBits = (_moxOn || _tuneActive) ? _ocTxMask : _ocRxMask;
         p[1401] = (byte)((ocBits & 0x7F) << 1);
 
+        // Anvelina-PRO3 DX OC extension (USEROUT7..10) at byte 1397, bits
+        // [4:1]. EU2AV's Open_Collector_Anvelina_DX for Thetis spec
+        // (issue #407): bit 1 -> USEROUT7, bit 2 -> USEROUT8,
+        // bit 3 -> USEROUT9, bit 4 -> USEROUT10. Bit 0 is reserved-internal
+        // and bits [7:5] are reserved-future — both MUST be transmitted as
+        // 0. Gated on board+variant so the byte stays at 0 on every other
+        // 0x0A-family radio (G2 / G2_1K / 7000DLE / 8000DLE / OrionMkII
+        // original / Red Pitaya), matching pre-#407 behaviour. Firmware
+        // additionally gates with run=1 at the FPGA so the bytes are
+        // harmless until streaming is up.
+        if (_boardKind == HpsdrBoardKind.OrionMkII
+            && _variant == OrionMkIIVariant.AnvelinaPro3)
+        {
+            byte dxBits = (_moxOn || _tuneActive) ? _ocDxTxMask : _ocDxRxMask;
+            p[1397] = (byte)((dxBits & 0x0F) << 1);
+        }
+
+        // DLE_outputs byte for ANAN-8000DLE / AnvelinaPro3 (`Orion.v` line
+        // 2119/2122/2125). Default 0; flipped by SetXvtrEnabled /
+        // SetIo1Muted / SetAutoTuneEnabled. Hermes RTL doesn't decode byte
+        // 1400, so emission is harmless on non-Orion_MkII boards. Issue #414.
+        p[1400] = _dleOutputs;
+
         // Mercury attenuator byte: bit 0 = RX0 preamp, bit 1 = RX1 preamp
         // (Thetis network.c:1037).
         p[1403] = (byte)(_preampOn ? 0x01 : 0x00);
 
         // ADC0 step attenuator (0-31 dB). Thetis network.c:1057.
+        // ADC1 step attenuator (0-31 dB) at byte 1442 — `Attenuator1` per
+        // `High_Priority_CC.v:186-189` (both Hermes and Orion_MkII RTL).
+        // Defaults to 0; set via SetRx1Attenuator for dual-RX dual-ADC
+        // boards. Issue #415.
+        p[1442] = _rx1StepAttnDb;
         p[1443] = _rxStepAttnDb;
 
         // Alex words. Bit positions and BPF selections per pihpsdr's alex.h +
@@ -1032,7 +1195,7 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
         // harmonics. Alex1 additionally gets RX_GNDonTX to short the RX input
         // while keyed, protecting the ADC.
         bool xmit = _moxOn || _tuneActive;
-        uint alexCommon = ComputeAlexWord(_rxFreqHz, _rxFreqHz, txAnt: 1);
+        uint alexCommon = ComputeAlexWord(_rxFreqHz, _rxFreqHz, txAnt: 1, board: _boardKind);
         uint alex0 = alexCommon | (xmit ? ALEX_TX_RELAY : 0u);
         uint alex1 = alexCommon | (xmit ? ALEX_TX_RELAY | ALEX1_ANAN7000_RX_GNDonTX : 0u);
         // ALEX_PS_BIT (0x00040000): pihpsdr new_protocol.c:994-998 ORs this
@@ -1102,6 +1265,19 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
     // back-feed into the Mercury ADC (pihpsdr alex.h ANAN7000_RX_GNDonTX).
     private const uint ALEX1_ANAN7000_RX_GNDonTX = 0x00000100;
 
+    // Classic Alex RX HPF bits (Hermes / ANAN-10/100/100D/200D / HermesII).
+    // pihpsdr alex.h:78-84. Note these bit positions collide with
+    // ANAN7000 RX BPF bits — they're the same bits in the Alex0 word
+    // but mean DIFFERENT filters depending on which board is connected.
+    // Issue #413.
+    private const uint ALEX_13MHZ_HPF  = 0x00000002;  // bit 1
+    private const uint ALEX_20MHZ_HPF  = 0x00000004;  // bit 2
+    private const uint ALEX_6M_PREAMP  = 0x00000008;  // bit 3 (35 MHz HPF + LNA)
+    private const uint ALEX_9_5MHZ_HPF = 0x00000010;  // bit 4
+    private const uint ALEX_6_5MHZ_HPF = 0x00000020;  // bit 5
+    private const uint ALEX_1_5MHZ_HPF = 0x00000040;  // bit 6
+    private const uint ALEX_BYPASS_HPF = 0x00001000;  // bit 12
+
     /// <summary>
     /// Compose the alex0 word the way <see cref="SendCmdHighPriority"/>
     /// does, exposed internal so wire-format tests can assert the
@@ -1112,20 +1288,27 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
         uint rxFreqHz,
         bool moxOn,
         bool psEnabled,
-        bool psExternal)
+        bool psExternal,
+        HpsdrBoardKind board = HpsdrBoardKind.OrionMkII)
     {
-        uint alexCommon = ComputeAlexWord(rxFreqHz, rxFreqHz, txAnt: 1);
+        uint alexCommon = ComputeAlexWord(rxFreqHz, rxFreqHz, txAnt: 1, board: board);
         uint alex0 = alexCommon | (moxOn ? ALEX_TX_RELAY : 0u);
         if (psEnabled && moxOn) alex0 |= AlexPsBit;
         if (psEnabled && psExternal && moxOn) alex0 |= AlexRxAntennaBypass;
         return alex0;
     }
 
-    internal static uint ComputeAlexWord(uint rxFreqHz, uint txFreqHz, int txAnt)
+    internal static uint ComputeAlexWord(uint rxFreqHz, uint txFreqHz, int txAnt, HpsdrBoardKind board = HpsdrBoardKind.OrionMkII)
     {
         uint word = 0;
-        word |= BpfBitsAnan7000(rxFreqHz);
-        word |= LpfBitsAnan7000(txFreqHz);
+        word |= board is HpsdrBoardKind.Hermes or HpsdrBoardKind.HermesII
+            ? BpfBitsClassicAlex(rxFreqHz)
+            : BpfBitsAnan7000(rxFreqHz);
+        // LPF bit positions and band thresholds are identical across both
+        // filter-board generations (classic Alex on Hermes/ANAN-100 vs
+        // ANAN-7000/Saturn BPF board) — confirmed against pihpsdr alex.h
+        // and new_protocol.c. Same call for every board.
+        word |= LpfBits(txFreqHz);
         word |= txAnt switch
         {
             1 => ALEX_TX_ANTENNA_1,
@@ -1138,6 +1321,8 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
 
     // RX BPF band splits lifted from pihpsdr new_protocol.c
     // (function new_protocol_high_priority, ADC0 BPFfreq selection).
+    // ANAN-7000 / Orion-II / Saturn filter board only — see
+    // BpfBitsClassicAlex for the Hermes / ANAN-100 layout.
     internal static uint BpfBitsAnan7000(uint freqHz)
     {
         if (freqHz <  1_500_000u) return ALEX_ANAN7000_RX_BYPASS_BPF;
@@ -1149,11 +1334,33 @@ public sealed class Protocol2Client : IDisposable, IAsyncDisposable
         return ALEX_ANAN7000_RX_6_PRE_BPF;
     }
 
+    // RX HPF band splits for the classic Alex filter board (Hermes,
+    // ANAN-10, ANAN-100, ANAN-100D, ANAN-200D, HermesII / ANAN-10E,
+    // ANAN-100B). Bit positions and thresholds lifted from pihpsdr
+    // alex.h and new_protocol.c:1154-1168. Note these are high-pass
+    // filters (not band-pass like the ANAN-7000 BPF board) — same low
+    // bits in the Alex0 word but different semantic per board.
+    // Issue #413.
+    internal static uint BpfBitsClassicAlex(uint freqHz)
+    {
+        if (freqHz <  1_800_000u) return ALEX_BYPASS_HPF;
+        if (freqHz <  6_500_000u) return ALEX_1_5MHZ_HPF;
+        if (freqHz <  9_500_000u) return ALEX_6_5MHZ_HPF;
+        if (freqHz < 13_000_000u) return ALEX_9_5MHZ_HPF;
+        if (freqHz < 20_000_000u) return ALEX_13MHZ_HPF;
+        if (freqHz < 50_000_000u) return ALEX_20MHZ_HPF;
+        return ALEX_6M_PREAMP;
+    }
+
     // TX LPF band splits. Thresholds match pihpsdr new_protocol.c:1204-1218
     // exactly (strict > rather than >= so the band edges route the way the
     // LPF board expects; off-by-one on a threshold lets the wrong filter
-    // pass harmonics at e.g. 24.9 MHz or 16.4 MHz).
-    internal static uint LpfBitsAnan7000(uint freqHz)
+    // pass harmonics at e.g. 24.9 MHz or 16.4 MHz). Bit positions and
+    // thresholds are identical across classic Alex and ANAN-7000 BPF
+    // boards — only the RX filter selection differs per board. Issue #413
+    // renamed this from LpfBitsAnan7000 to LpfBits to reflect the shared
+    // scope.
+    internal static uint LpfBits(uint freqHz)
     {
         if (freqHz > 35_600_000u) return ALEX_6_BYPASS_LPF;
         if (freqHz > 24_000_000u) return ALEX_12_10_LPF;
