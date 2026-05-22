@@ -596,7 +596,7 @@ export function PsSettingsPanel() {
               aria-live="polite"
               title="PureSignal has been keyed for more than 5 seconds without completing a calibration fit. This almost always means HW peak is set higher than the actual TX envelope peak — calcc bin 15 never fills."
             >
-              ⚠ PS not converging — try lowering HW peak below your observed TX peak.
+              ⚠ PS not converging — set HW peak just above your observed TX peak (~5%).
             </div>
           ) : null}
 
