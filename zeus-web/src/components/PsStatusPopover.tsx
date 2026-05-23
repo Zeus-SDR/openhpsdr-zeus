@@ -64,8 +64,8 @@ export function PsStatusPopover() {
   const feedbackRound = Math.round(psFeedbackLevel);
 
   const keyed = moxOn || tunOn || twoToneOn;
-  const isCorrecting = psCorrecting && keyed;
-  const isReady = psCorrecting && !keyed;
+  const isCorrecting = psEnabled && psCorrecting && keyed;
+  const isReady = psEnabled && psCorrecting && !keyed;
   const isRunning = psEnabled && !psCorrecting && psCalState > 0;
   const dialClass = isCorrecting || isReady ? 'is-converged' : '';
   const armedLabel = !psEnabled
@@ -79,16 +79,19 @@ export function PsStatusPopover() {
           : 'ARMED';
 
   // Peak meter scale — same logic as the Settings hero so values map 1:1
-  // between the two views.
+  // between the two views. calcc needs observed ∈ [0.80·hw_peak, hw_peak]
+  // for scOK (top bins filled, no clip); outside that the fit stalls.
   const meterScale = Math.max(psHwPeak * 1.4, psMaxTxEnvelope * 1.05, 0.001);
   const obsPct = Math.min(100, (psMaxTxEnvelope / meterScale) * 100);
   const refPct = Math.min(100, (psHwPeak / meterScale) * 100);
-  const obsClass =
-    psMaxTxEnvelope >= psHwPeak
-      ? 'bad'
-      : psMaxTxEnvelope > psHwPeak * 0.95
-        ? 'warn'
-        : '';
+  const obsClipping = psMaxTxEnvelope > psHwPeak;
+  const obsStarved = psMaxTxEnvelope > 0 && psMaxTxEnvelope < psHwPeak * 0.80;
+  const obsClass = obsClipping ? 'bad' : obsStarved ? 'warn' : '';
+  const obsHint = obsClipping
+    ? 'HW peak too low — Observed clipping.'
+    : obsStarved
+      ? 'HW peak too high — Observed needs ≥ 90 %.'
+      : null;
 
   const modeLabel = psSingle ? 'Single' : psAuto ? 'Auto' : 'Manual';
 
@@ -140,7 +143,7 @@ export function PsStatusPopover() {
           <div className="ps-popover-row">
             <dt>Correction</dt>
             <dd className="mono">
-              {psCorrecting ? `+${psCorrectionDb.toFixed(2)} dB` : '—'}
+              {psEnabled && psCorrecting ? `+${psCorrectionDb.toFixed(2)} dB` : '—'}
             </dd>
           </div>
         </dl>
@@ -159,6 +162,7 @@ export function PsStatusPopover() {
           <span>HW peak</span>
           <span className="mono">{psHwPeak.toFixed(4)}</span>
         </div>
+        {obsHint ? <div className="ps-popover-peak-hint">{obsHint}</div> : null}
       </div>
 
       <div className="ps-popover-foot">

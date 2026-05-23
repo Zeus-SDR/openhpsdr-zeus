@@ -131,7 +131,7 @@ export function PsToggleButton() {
         <span className={`led ${psEnabled ? 'on' : ''}`} style={{ marginRight: 8 }} />
         PS
       </button>
-      {open ? (
+      {open && psEnabled ? (
         <span
           id="ps-status-popover"
           className="ps-popover-anchor"

@@ -215,13 +215,14 @@ export function PsSettingsPanel() {
 
   // Dial state visualization. WDSP info[14] (psCorrecting) reports "iqc
   // curve loaded + engaged" — true even when MOX is off, because the curve
-  // persists between keying cycles. Split into two pill states so the
-  // operator sees the right thing:
+  // persists between keying cycles. It also stays high after the operator
+  // disables PS until the curve is explicitly cleared, so gate on psEnabled
+  // too — otherwise the panel claims "correcting" with PS off.
   //   - "correcting" only when actively transmitting (curve applied to live RF)
   //   - "ready"      when curve is loaded but radio is idle
   const keyed = moxOn || tunOn || twoToneOn;
-  const isCorrecting = psCorrecting && keyed;
-  const isReady = psCorrecting && !keyed;
+  const isCorrecting = psEnabled && psCorrecting && keyed;
+  const isReady = psEnabled && psCorrecting && !keyed;
   const isRunning = psEnabled && !psCorrecting && psCalState > 0;
   const dialClass = isCorrecting || isReady ? 'is-converged' : '';
   const pillClass = isCorrecting || isReady ? 'ok' : isRunning ? 'run' : '';
@@ -265,17 +266,22 @@ export function PsSettingsPanel() {
   const sparkPoints = buildSparkline(sparkRef.current);
 
   // Peak meters share the same x-scale: 0..max(HW peak * 1.4, observed).
-  // Observed peak warns when within 5% of HW peak, faults at HW peak.
+  // calcc only sets scOK (= curve loaded) when bins 0..3 of the envelope
+  // histogram are full, which requires observed ∈ [0.80·hw_peak, hw_peak].
+  // Below that the top bins starve → PS sits in COLLECT forever;
+  // above hw_peak the envelope clips into bin 15.
   const meterScale = Math.max(psHwPeak * 1.4, psMaxTxEnvelope * 1.05, 0.001);
   const obsPct = Math.min(100, (psMaxTxEnvelope / meterScale) * 100);
   const hwRefPct = Math.min(100, (psHwPeak / meterScale) * 100);
   const hwSelfPct = Math.min(100, (psHwPeak / meterScale) * 100);
-  const obsClass =
-    psMaxTxEnvelope >= psHwPeak
-      ? 'bad'
-      : psMaxTxEnvelope > psHwPeak * 0.95
-        ? 'warn'
-        : '';
+  const obsClipping = psMaxTxEnvelope > psHwPeak;
+  const obsStarved = psMaxTxEnvelope > 0 && psMaxTxEnvelope < psHwPeak * 0.80;
+  const obsClass = obsClipping ? 'bad' : obsStarved ? 'warn' : '';
+  const obsHint = obsClipping
+    ? 'HW peak too low — Observed is clipping into the ADC ceiling.'
+    : obsStarved
+      ? 'HW peak too high — Observed needs to reach ≥ 90 % of it for the fit to converge.'
+      : 'Live feedback amplitude · should sit in the 90–100 % band of HW peak.';
 
   // Signal-flow node states: TX is always "on" when psEnabled; remaining
   // nodes light up when calibration is actually running so the operator
@@ -416,9 +422,7 @@ export function PsSettingsPanel() {
                 <div className="ps-mfill" style={{ width: `${obsPct}%` }} />
                 <div className="ps-ref" style={{ left: `${hwRefPct}%` }} />
               </div>
-              <div className="ps-help">
-                Live feedback amplitude · target near HW peak.
-              </div>
+              <div className="ps-help">{obsHint}</div>
             </div>
 
             <div className="ps-peak">
