@@ -42,11 +42,15 @@
 // Zeus is distributed WITHOUT ANY WARRANTY; see the GNU General Public
 // License for details.
 
-import { useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SMeter } from './SMeter';
 import { useTxStore } from '../state/tx-store';
+import { useRadioStore } from '../state/radio-store';
 import { useMeterDisplaySettingsStore } from '../state/meter-display-settings-store';
 import {
+  MAX_DISPLAYED_WATTS_MAX,
+  MAX_DISPLAYED_WATTS_MIN,
   SMETER_OFFSET_MIN_DB,
   SMETER_OFFSET_MAX_DB,
 } from '../api/meter-display-settings';
@@ -72,6 +76,8 @@ export function SMeterLive({ hideChips = false }: { hideChips?: boolean } = {}) 
   const micDbfs = useTxStore((s) => s.micDbfs);
   const rxDbm = useTxStore((s) => s.rxDbm);
   const sMeterOffsetDb = useMeterDisplaySettingsStore((s) => s.sMeterOffsetDb);
+  const maxDisplayedWatts = useMeterDisplaySettingsStore((s) => s.maxDisplayedWatts);
+  const boardMaxWatts = useRadioStore((s) => s.capabilities.maxPowerWatts);
   const transmitting = moxOn || tunOn;
 
   const swrColor = swr >= 3 ? 'var(--tx)' : swr >= 2 ? 'var(--power)' : 'var(--fg-0)';
@@ -81,6 +87,16 @@ export function SMeterLive({ hideChips = false }: { hideChips?: boolean } = {}) 
   // calibration popover already mutate the store value, so this single
   // sum is the only place the offset enters the render path.
   const displayedDbm = rxDbm + sMeterOffsetDb;
+
+  // TX meter full scale: operator override wins; otherwise fall back to
+  // the radio's rated MaxWatts (via /api/capabilities); 100 W is the
+  // historical fallback when neither is available.
+  const ratedMaxWatts =
+    maxDisplayedWatts > 0
+      ? maxDisplayedWatts
+      : boardMaxWatts > 0
+      ? boardMaxWatts
+      : 100;
 
   return (
     <div
@@ -94,7 +110,7 @@ export function SMeterLive({ hideChips = false }: { hideChips?: boolean } = {}) 
     >
       <div>
         {transmitting ? (
-          <SMeter mode="tx" watts={fwdWatts} maxWatts={100} />
+          <SMeter mode="tx" watts={fwdWatts} maxWatts={ratedMaxWatts} />
         ) : (
           <SMeter mode="rx" dbm={displayedDbm} />
         )}
@@ -125,9 +141,27 @@ export function SMeterLive({ hideChips = false }: { hideChips?: boolean } = {}) 
 function SMeterCalibrationGear() {
   const [open, setOpen] = useState(false);
   const sMeterOffsetDb = useMeterDisplaySettingsStore((s) => s.sMeterOffsetDb);
-  const setLocal = useMeterDisplaySettingsStore((s) => s.setSMeterOffsetDbLocal);
-  const persist = useMeterDisplaySettingsStore((s) => s.persistSMeterOffsetDb);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const setOffsetLocal = useMeterDisplaySettingsStore((s) => s.setSMeterOffsetDbLocal);
+  const persistOffset = useMeterDisplaySettingsStore((s) => s.persistSMeterOffsetDb);
+  const maxDisplayedWatts = useMeterDisplaySettingsStore((s) => s.maxDisplayedWatts);
+  const setMaxWattsLocal = useMeterDisplaySettingsStore((s) => s.setMaxDisplayedWattsLocal);
+  const persistMaxWatts = useMeterDisplaySettingsStore((s) => s.persistMaxDisplayedWatts);
+  const boardMaxWatts = useRadioStore((s) => s.capabilities.maxPowerWatts);
+  const offsetRef = useRef<HTMLInputElement | null>(null);
+  const maxWattsRef = useRef<HTMLInputElement | null>(null);
+  // Inputs show empty when "no override" — keeps the placeholder
+  // (the radio's rated MaxWatts) visible until the operator types.
+  const [maxWattsDraft, setMaxWattsDraft] = useState<string>(
+    maxDisplayedWatts > 0 ? String(maxDisplayedWatts) : '',
+  );
+
+  // Keep the draft in sync with hydration / external changes (e.g. another
+  // device updates the store). Skip resync while the input is focused so
+  // we don't yank what the operator is typing.
+  useEffect(() => {
+    if (document.activeElement === maxWattsRef.current) return;
+    setMaxWattsDraft(maxDisplayedWatts > 0 ? String(maxDisplayedWatts) : '');
+  }, [maxDisplayedWatts]);
 
   return (
     <>
@@ -197,7 +231,7 @@ function SMeterCalibrationGear() {
           >
             <span>Offset (dB)</span>
             <input
-              ref={inputRef}
+              ref={offsetRef}
               type="number"
               step={0.5}
               min={SMETER_OFFSET_MIN_DB}
@@ -205,39 +239,107 @@ function SMeterCalibrationGear() {
               value={sMeterOffsetDb}
               onChange={(e) => {
                 const v = parseFloat(e.target.value);
-                if (Number.isFinite(v)) setLocal(v);
+                if (Number.isFinite(v)) setOffsetLocal(v);
               }}
               onBlur={() => {
-                void persist(sMeterOffsetDb);
+                void persistOffset(sMeterOffsetDb);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  inputRef.current?.blur();
+                  offsetRef.current?.blur();
                   setOpen(false);
                 } else if (e.key === 'Escape') {
                   setOpen(false);
                 }
               }}
-              style={{
-                width: 70,
-                background: 'var(--bg-0)',
-                color: 'var(--fg-0)',
-                border: '1px solid var(--line-strong)',
-                borderRadius: 3,
-                padding: '2px 6px',
-                fontFamily: 'inherit',
-                fontSize: 11,
-                textAlign: 'right',
-              }}
+              style={inputStyle}
             />
           </label>
-          <div style={{ color: 'var(--fg-3)', fontSize: 10, lineHeight: 1.3 }}>
+          <div style={hintStyle}>
             Trim ±{SMETER_OFFSET_MAX_DB} dB on the displayed RX signal.
             Does not affect the radio.
+          </div>
+
+          <div style={{ height: 1, background: 'var(--line-soft)', margin: '4px 0' }} />
+
+          <div
+            style={{
+              color: 'var(--fg-2)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              fontSize: 10,
+            }}
+          >
+            TX meter full scale
+          </div>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+              color: 'var(--fg-1)',
+            }}
+          >
+            <span>Max watts</span>
+            <input
+              ref={maxWattsRef}
+              type="number"
+              step={1}
+              min={MAX_DISPLAYED_WATTS_MIN}
+              max={MAX_DISPLAYED_WATTS_MAX}
+              value={maxWattsDraft}
+              placeholder={boardMaxWatts > 0 ? String(boardMaxWatts) : '100'}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setMaxWattsDraft(raw);
+                if (raw === '') {
+                  setMaxWattsLocal(0);
+                  return;
+                }
+                const v = parseFloat(raw);
+                if (Number.isFinite(v)) setMaxWattsLocal(v);
+              }}
+              onBlur={() => {
+                void persistMaxWatts(maxDisplayedWatts);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  maxWattsRef.current?.blur();
+                  setOpen(false);
+                } else if (e.key === 'Escape') {
+                  setOpen(false);
+                }
+              }}
+              style={inputStyle}
+            />
+          </label>
+          <div style={hintStyle}>
+            Empty = use the radio's rated power. Set lower (e.g. 25 W
+            on a 100 W radio) to fill the bar.
           </div>
         </div>
       )}
     </>
   );
 }
+
+const inputStyle: CSSProperties = {
+  width: 70,
+  background: 'var(--bg-0)',
+  color: 'var(--fg-0)',
+  border: '1px solid var(--line-strong)',
+  borderRadius: 3,
+  padding: '2px 6px',
+  fontFamily: 'inherit',
+  fontSize: 11,
+  textAlign: 'right',
+};
+
+const hintStyle: CSSProperties = {
+  color: 'var(--fg-3)',
+  fontSize: 10,
+  lineHeight: 1.3,
+};

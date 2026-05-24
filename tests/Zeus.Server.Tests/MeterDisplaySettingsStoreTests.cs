@@ -94,4 +94,84 @@ public class MeterDisplaySettingsStoreTests : IDisposable
         store.SetSMeterOffsetDb(-2.0);
         Assert.Equal(2, fired);
     }
+
+    // ---- MaxDisplayedWatts knob (GitHub #426 follow-up) ----
+
+    [Fact]
+    public void Empty_Store_Returns_Zero_MaxDisplayedWatts_Meaning_NoOverride()
+    {
+        using var store = new MeterDisplaySettingsStore(
+            NullLogger<MeterDisplaySettingsStore>.Instance, _dbPath);
+        // 0 = "no override, fall back to the radio's rated MaxWatts".
+        Assert.Equal(0.0, store.Get().MaxDisplayedWatts);
+    }
+
+    [Theory]
+    [InlineData(1.0)]      // lower bound
+    [InlineData(25.0)]     // common HL2-on-100W-bracket use case
+    [InlineData(50.0)]
+    [InlineData(1000.0)]   // upper bound
+    public void SetMaxDisplayedWatts_In_Range_Round_Trips(double w)
+    {
+        using var store = new MeterDisplaySettingsStore(
+            NullLogger<MeterDisplaySettingsStore>.Instance, _dbPath);
+        store.SetMaxDisplayedWatts(w);
+        Assert.Equal(w, store.Get().MaxDisplayedWatts, precision: 6);
+    }
+
+    [Theory]
+    [InlineData(0.0, 0.0)]        // 0 stays 0 (no override)
+    [InlineData(-5.0, 0.0)]       // negative is "clear the override"
+    [InlineData(0.5, 1.0)]        // sub-min positive clamps up to 1
+    [InlineData(5000.0, 1000.0)]  // huge value clamps to ceiling
+    public void SetMaxDisplayedWatts_Out_Of_Range_Clamps(double input, double expected)
+    {
+        using var store = new MeterDisplaySettingsStore(
+            NullLogger<MeterDisplaySettingsStore>.Instance, _dbPath);
+        store.SetMaxDisplayedWatts(input);
+        Assert.Equal(expected, store.Get().MaxDisplayedWatts, precision: 6);
+    }
+
+    [Fact]
+    public void MaxDisplayedWatts_Non_Finite_Resets_To_Default()
+    {
+        using var store = new MeterDisplaySettingsStore(
+            NullLogger<MeterDisplaySettingsStore>.Instance, _dbPath);
+        store.SetMaxDisplayedWatts(double.NaN);
+        Assert.Equal(0.0, store.Get().MaxDisplayedWatts);
+        store.SetMaxDisplayedWatts(double.PositiveInfinity);
+        Assert.Equal(0.0, store.Get().MaxDisplayedWatts);
+    }
+
+    [Fact]
+    public void MaxDisplayedWatts_Persists_Across_Instances()
+    {
+        using (var s1 = new MeterDisplaySettingsStore(
+                   NullLogger<MeterDisplaySettingsStore>.Instance, _dbPath))
+        {
+            s1.SetMaxDisplayedWatts(25.0);
+        }
+        using var s2 = new MeterDisplaySettingsStore(
+            NullLogger<MeterDisplaySettingsStore>.Instance, _dbPath);
+        Assert.Equal(25.0, s2.Get().MaxDisplayedWatts, precision: 6);
+    }
+
+    [Fact]
+    public void Two_Knobs_Are_Independent()
+    {
+        // Persisting one knob must not stomp the other.
+        using var store = new MeterDisplaySettingsStore(
+            NullLogger<MeterDisplaySettingsStore>.Instance, _dbPath);
+        store.SetSMeterOffsetDb(-4.0);
+        store.SetMaxDisplayedWatts(50.0);
+        var dto = store.Get();
+        Assert.Equal(-4.0, dto.SMeterOffsetDb, precision: 6);
+        Assert.Equal(50.0, dto.MaxDisplayedWatts, precision: 6);
+
+        // Update one, verify the other survives.
+        store.SetSMeterOffsetDb(7.5);
+        dto = store.Get();
+        Assert.Equal(7.5, dto.SMeterOffsetDb, precision: 6);
+        Assert.Equal(50.0, dto.MaxDisplayedWatts, precision: 6);
+    }
 }

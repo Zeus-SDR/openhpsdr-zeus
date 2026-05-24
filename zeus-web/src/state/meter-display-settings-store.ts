@@ -9,7 +9,11 @@
 import { create } from 'zustand';
 import {
   fetchMeterDisplaySettings,
+  updateMaxDisplayedWatts,
   updateSMeterOffsetDb,
+  MAX_DISPLAYED_WATTS_DEFAULT,
+  MAX_DISPLAYED_WATTS_MAX,
+  MAX_DISPLAYED_WATTS_MIN,
   SMETER_OFFSET_DEFAULT_DB,
   SMETER_OFFSET_MIN_DB,
   SMETER_OFFSET_MAX_DB,
@@ -26,9 +30,13 @@ import {
 
 type MeterDisplaySettingsState = {
   sMeterOffsetDb: number;
+  // 0 = "no override, use radio's MaxWatts as the meter full scale".
+  maxDisplayedWatts: number;
   hydrated: boolean;
   setSMeterOffsetDbLocal: (dB: number) => void;
   persistSMeterOffsetDb: (dB: number) => Promise<void>;
+  setMaxDisplayedWattsLocal: (w: number) => void;
+  persistMaxDisplayedWatts: (w: number) => Promise<void>;
 };
 
 function clampOffset(v: number): number {
@@ -38,8 +46,17 @@ function clampOffset(v: number): number {
   return v;
 }
 
+function clampMaxWatts(v: number): number {
+  if (!Number.isFinite(v)) return MAX_DISPLAYED_WATTS_DEFAULT;
+  if (v <= 0) return MAX_DISPLAYED_WATTS_DEFAULT;
+  if (v < MAX_DISPLAYED_WATTS_MIN) return MAX_DISPLAYED_WATTS_MIN;
+  if (v > MAX_DISPLAYED_WATTS_MAX) return MAX_DISPLAYED_WATTS_MAX;
+  return v;
+}
+
 export const useMeterDisplaySettingsStore = create<MeterDisplaySettingsState>((set) => ({
   sMeterOffsetDb: SMETER_OFFSET_DEFAULT_DB,
+  maxDisplayedWatts: MAX_DISPLAYED_WATTS_DEFAULT,
   hydrated: false,
   setSMeterOffsetDbLocal: (dB) => {
     set({ sMeterOffsetDb: clampOffset(dB) });
@@ -49,11 +66,30 @@ export const useMeterDisplaySettingsStore = create<MeterDisplaySettingsState>((s
     set({ sMeterOffsetDb: next });
     try {
       const result = await updateSMeterOffsetDb(next);
-      set({ sMeterOffsetDb: result.sMeterOffsetDb });
+      set({
+        sMeterOffsetDb: result.sMeterOffsetDb,
+        maxDisplayedWatts: result.maxDisplayedWatts,
+      });
     } catch {
       // Network / server failure — keep the local value. Next commit
       // will retry. We deliberately do NOT roll back: the operator's
       // intent is the value they just dialed in.
+    }
+  },
+  setMaxDisplayedWattsLocal: (w) => {
+    set({ maxDisplayedWatts: clampMaxWatts(w) });
+  },
+  persistMaxDisplayedWatts: async (w) => {
+    const next = clampMaxWatts(w);
+    set({ maxDisplayedWatts: next });
+    try {
+      const result = await updateMaxDisplayedWatts(next);
+      set({
+        sMeterOffsetDb: result.sMeterOffsetDb,
+        maxDisplayedWatts: result.maxDisplayedWatts,
+      });
+    } catch {
+      // See above — keep the local value on failure.
     }
   },
 }));
@@ -63,10 +99,11 @@ async function hydrateFromServer(): Promise<void> {
     const server = await fetchMeterDisplaySettings();
     useMeterDisplaySettingsStore.setState({
       sMeterOffsetDb: server.sMeterOffsetDb,
+      maxDisplayedWatts: server.maxDisplayedWatts,
       hydrated: true,
     });
   } catch {
-    // Backend unreachable — keep the default. Stay unhydrated so the
+    // Backend unreachable — keep the defaults. Stay unhydrated so the
     // next successful fetch (or a PUT) populates the store.
     useMeterDisplaySettingsStore.setState({ hydrated: false });
   }

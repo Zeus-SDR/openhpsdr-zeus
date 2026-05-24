@@ -926,6 +926,16 @@ public static class ZeusEndpoints
                 return Results.Ok(saved);
             });
 
+        // Operator override for the TX forward-power meter's full scale.
+        // Clamped server-side; 0 means "no override, use the radio's
+        // rated MaxWatts" (historical behaviour).
+        app.MapPut("/api/meters/max-displayed-watts",
+            (MaxDisplayedWattsSetRequest req, MeterDisplaySettingsStore store) =>
+            {
+                var saved = store.SetMaxDisplayedWatts(req.MaxWatts);
+                return Results.Ok(saved);
+            });
+
         // Inline NR settings accordion disclosure state (NR1 / NR2 / NR4).
         // PUT writes all three flags atomically. Persisted in zeus-prefs.db
         // so the chevron-open preference follows the operator across
