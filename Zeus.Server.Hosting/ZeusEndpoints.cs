@@ -847,7 +847,8 @@ public static class ZeusEndpoints
                 return Results.BadRequest(new { error = "mode and fit required" });
             store.SaveMode(req.Mode, req.Fit, req.RxTraceColor,
                 req.DbMin, req.DbMax, req.TxDbMin, req.TxDbMax,
-                req.WfDbMin, req.WfDbMax, req.WfTxDbMin, req.WfTxDbMax);
+                req.WfDbMin, req.WfDbMax, req.WfTxDbMin, req.WfTxDbMax,
+                req.WfBrightness);
             return Results.Ok(store.Get());
         });
 

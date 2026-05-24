@@ -65,7 +65,8 @@ public sealed class DisplaySettingsStore : IDisposable
                     WfDbMin: null,
                     WfDbMax: null,
                     WfTxDbMin: null,
-                    WfTxDbMax: null);
+                    WfTxDbMax: null,
+                    WfBrightness: null);
             }
             return new DisplaySettingsDto(
                 Mode: NormalizeMode(e.Mode),
@@ -80,18 +81,21 @@ public sealed class DisplaySettingsStore : IDisposable
                 WfDbMin: e.WfDbMin,
                 WfDbMax: e.WfDbMax,
                 WfTxDbMin: e.WfTxDbMin,
-                WfTxDbMax: e.WfTxDbMax);
+                WfTxDbMax: e.WfTxDbMax,
+                WfBrightness: e.WfBrightness);
         }
     }
 
-    // Null dB range values are treated as "not provided" — the existing
-    // stored value is kept unchanged. This lets callers updating only
-    // mode/fit/color leave the operator's dB scale untouched.
+    // Null dB range / brightness values are treated as "not provided" — the
+    // existing stored value is kept unchanged. This lets callers updating only
+    // mode/fit/color leave the operator's dB scale and waterfall brightness
+    // untouched.
     public void SaveMode(string mode, string fit, string rxTraceColor,
         double? dbMin = null, double? dbMax = null,
         double? txDbMin = null, double? txDbMax = null,
         double? wfDbMin = null, double? wfDbMax = null,
-        double? wfTxDbMin = null, double? wfTxDbMax = null)
+        double? wfTxDbMin = null, double? wfTxDbMax = null,
+        double? wfBrightness = null)
     {
         lock (_sync)
         {
@@ -107,6 +111,7 @@ public sealed class DisplaySettingsStore : IDisposable
             if (wfDbMax.HasValue) e.WfDbMax = wfDbMax;
             if (wfTxDbMin.HasValue) e.WfTxDbMin = wfTxDbMin;
             if (wfTxDbMax.HasValue) e.WfTxDbMax = wfTxDbMax;
+            if (wfBrightness.HasValue) e.WfBrightness = NormalizeBrightness(wfBrightness.Value);
             e.UpdatedUtc = DateTime.UtcNow;
             if (e.Id == 0) _docs.Insert(e);
             else _docs.Update(e);
@@ -171,6 +176,20 @@ public sealed class DisplaySettingsStore : IDisposable
     // and the original hard-coded #FFA028 in gl/panadapter.ts.
     public const string DefaultRxTraceColor = "#FFA028";
 
+    // Waterfall brightness slider bounds — must stay in lockstep with
+    // WF_BRIGHTNESS_MIN / WF_BRIGHTNESS_MAX in display-settings-store.ts so
+    // the server-side clamp matches what the UI slider can produce.
+    private const double WfBrightnessMin = 0.25;
+    private const double WfBrightnessMax = 4.0;
+
+    private static double NormalizeBrightness(double raw)
+    {
+        if (double.IsNaN(raw) || double.IsInfinity(raw)) return 1.0;
+        if (raw < WfBrightnessMin) return WfBrightnessMin;
+        if (raw > WfBrightnessMax) return WfBrightnessMax;
+        return raw;
+    }
+
     private static string NormalizeHexColor(string? raw)
     {
         if (string.IsNullOrEmpty(raw)) return DefaultRxTraceColor;
@@ -212,5 +231,10 @@ public sealed class DisplaySettingsEntry
     public double? WfDbMax { get; set; }
     public double? WfTxDbMin { get; set; }
     public double? WfTxDbMax { get; set; }
+    // Waterfall colormap brightness multiplier. Null on rows written before
+    // this field existed — Get() returns null, the frontend defaults to 1.0
+    // (no change) and pushes the value up on first interaction. See
+    // gl/shaders.ts WF_FS for how this is applied. Issue #426.
+    public double? WfBrightness { get; set; }
     public DateTime UpdatedUtc { get; set; }
 }

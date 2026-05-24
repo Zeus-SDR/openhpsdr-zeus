@@ -121,4 +121,48 @@ public class DisplaySettingsPersistenceTests : IDisposable
         Assert.Equal(-120, dto.DbMin);
         Assert.Equal(-40, dto.DbMax);
     }
+
+    // Issue #426 — waterfall brightness is the same persisted-double pattern
+    // as the dB ranges. Cover the three round-trip behaviours so a future
+    // refactor that breaks any one of them is caught here.
+
+    [Fact]
+    public void FreshDb_ReturnsNullForWfBrightness()
+    {
+        using var store = BuildStore();
+        Assert.Null(store.Get().WfBrightness);
+    }
+
+    [Fact]
+    public void SaveMode_WithWfBrightness_PersistsAcrossReopen()
+    {
+        using (var store = BuildStore())
+        {
+            store.SaveMode("basic", "fill", "#FFA028", wfBrightness: 1.75);
+        }
+        using var fresh = BuildStore();
+        Assert.Equal(1.75, fresh.Get().WfBrightness);
+    }
+
+    [Fact]
+    public void SaveMode_NullWfBrightness_PreservesExistingValue()
+    {
+        using var store = BuildStore();
+        store.SaveMode("basic", "fill", "#FFA028", wfBrightness: 2.0);
+        // Subsequent save that doesn't touch brightness must not zero it.
+        store.SaveMode("beam-map", "fit", "#FFA028");
+        Assert.Equal(2.0, store.Get().WfBrightness);
+    }
+
+    [Fact]
+    public void SaveMode_ClampsWfBrightnessToSliderBounds()
+    {
+        using var store = BuildStore();
+        // Below WF_BRIGHTNESS_MIN (0.25) clamps up.
+        store.SaveMode("basic", "fill", "#FFA028", wfBrightness: 0.01);
+        Assert.Equal(0.25, store.Get().WfBrightness);
+        // Above WF_BRIGHTNESS_MAX (4.0) clamps down.
+        store.SaveMode("basic", "fill", "#FFA028", wfBrightness: 99.0);
+        Assert.Equal(4.0, store.Get().WfBrightness);
+    }
 }

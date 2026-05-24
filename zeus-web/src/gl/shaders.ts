@@ -133,6 +133,14 @@ uniform float uBgAlpha;
 // uViewportOffsetUv = viewportOffsetHz / spanHz.
 uniform float uViewportOffsetUv;
 uniform float uSeedDb;
+// Operator-tunable colormap brightness (issue #426). Multiplies the
+// normalised dB position before the LUT lookup so the lookup index — and
+// therefore the colour — shifts brighter (>1) or darker (<1). 1.0 = no
+// change. The pre-clamp multiply preserves dynamic range: values that would
+// have indexed off the top of the LUT still saturate at the brightest
+// colour, but mid-noise rows that previously sat near the dark end of the
+// gradient slide up into more visible territory.
+uniform float uBrightness;
 out vec4 fragColor;
 void main() {
   // vUv.y == 1.0 at top of canvas; newest row sits at the top.
@@ -143,7 +151,7 @@ void main() {
   float v = (srcX < 0.0 || srcX > 1.0)
     ? uSeedDb
     : texture(uHistory, vec2(srcX, (row + 0.5) / uH)).r;
-  float n = clamp((v - uDbMin) / (uDbMax - uDbMin), 0.0, 1.0);
+  float n = clamp(((v - uDbMin) / (uDbMax - uDbMin)) * uBrightness, 0.0, 1.0);
   vec4 c = texture(uLut, vec2(n, 0.5));
   // uBgAlpha=1 → fully opaque (normal mode). uBgAlpha=0 → noise floor is
   // fully transparent and signal peaks fade in proportionally; map/background

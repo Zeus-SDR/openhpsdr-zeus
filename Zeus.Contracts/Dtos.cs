@@ -585,6 +585,12 @@ public sealed record Hl2OptionsSetRequest(bool BandVolts);
 // so the settings follow the operator across browsers / devices — Photino
 // desktop mode in particular binds the webview to a fresh random loopback
 // port on every launch, which orphans any per-origin localStorage value.
+// WfBrightness is an operator-tunable multiplier applied to the colormap
+// input in the waterfall fragment shader (gl/shaders.ts WF_FS). 1.0 = no
+// change, < 1.0 darkens, > 1.0 brightens. Null means the server has never
+// stored a value; the frontend uses its built-in default (WF_BRIGHTNESS_DEFAULT
+// in display-settings-store.ts) and pushes the current value up on next
+// interaction. See issue #426 / bd zeus-lez.
 public sealed record DisplaySettingsDto(
     string Mode,
     string Fit,
@@ -598,7 +604,8 @@ public sealed record DisplaySettingsDto(
     double? WfDbMin,
     double? WfDbMax,
     double? WfTxDbMin,
-    double? WfTxDbMax);
+    double? WfTxDbMax,
+    double? WfBrightness);
 
 public sealed record DisplaySettingsSetRequest(
     string Mode,
@@ -611,7 +618,8 @@ public sealed record DisplaySettingsSetRequest(
     double? WfDbMin = null,
     double? WfDbMax = null,
     double? WfTxDbMin = null,
-    double? WfTxDbMax = null);
+    double? WfTxDbMax = null,
+    double? WfBrightness = null);
 
 // Per-mode disclosure state for the inline NR settings accordion that hangs
 // below the DSP NR toggle row. Three independent booleans — one per NR
