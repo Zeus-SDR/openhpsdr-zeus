@@ -1195,20 +1195,15 @@ public sealed class WdspDspEngine : IDspEngine
             NativeMethods.SetTXACompressorRun(id, 0);
             NativeMethods.SetTXACFCOMPRun(id, 0);
             NativeMethods.SetTXAPHROTRun(id, 0);
-            // CESSB / osctrl — OFF, matching Thetis, pihpsdr, and DeskHPSDR,
-            // which ALL keep it off unless the speech compressor is engaged
-            // (Thetis CESSB_On=false in every profile; pihpsdr/desk gate it on
-            // COMP). The prior "unconditionally ON" here misread Thetis. osctrl
-            // is a non-linear lookahead peak divisor meant to precede the comp/
-            // clipper it was tuned with; run standalone in front of the ALC it
-            // makes the peak-envelope statistics amplitude-dependent and non-
-            // stationary on VOICE (a no-op on a constant two-tone envelope), so
-            // PS sees a moving target at the peaks → uncorrected voice-peak
-            // splatter with PS engaged, while the two-tone stays clean. With it
-            // off, the ALC is the sole envelope limiter before xiqc (the
-            // reference topology) and every peak PS sees sits at the calibrated
-            // ceiling. #559 — root-caused against Thetis/pi/desk.
-            NativeMethods.SetTXAosctrlRun(id, 0);
+            // CESSB / osctrl — ON at TXA open (Brian's default, ~1-1.5 dB
+            // average voice-SSB power; bd zeus-5cg). PS isn't armed at open, so
+            // this is the correct non-PS state. It is then toggled OFF while PS
+            // is armed and back ON on disarm in SetPsEnabled — because osctrl
+            // (a non-linear lookahead peak divisor) standalone in front of the
+            // ALC makes the peak envelope non-stationary on voice and breaks PS
+            // voice-peak correction (Thetis/pi/desk keep it out of the PS path).
+            // #559.
+            NativeMethods.SetTXAosctrlRun(id, 1);
             NativeMethods.SetTXAEQRun(id, 0);
             NativeMethods.SetTXAAMSQRun(id, 0);
             NativeMethods.SetTXAALCSt(id, 1);
@@ -1951,6 +1946,14 @@ public sealed class WdspDspEngine : IDspEngine
                 // becomes a no-op in that case and Tick keeps falling through
                 // to the existing TX/RX trace.
                 OpenPsFeedbackAnalyzer(id);
+                // CESSB/osctrl OFF while PS is armed (#559). osctrl is a
+                // non-linear lookahead peak divisor; standalone in front of the
+                // ALC it makes the peak envelope non-stationary on voice, so PS
+                // sees a moving target at the peaks → voice-peak splatter. Off
+                // here = the reference topology (Thetis/pi/desk keep it out of
+                // the PS path). Restored to Brian's default (ON) on disarm — so
+                // non-PS operators keep the ~1-1.5 dB average-power win.
+                NativeMethods.SetTXAosctrlRun(id, 0);
             }
             else
             {
@@ -1979,6 +1982,10 @@ public sealed class WdspDspEngine : IDspEngine
                 }
                 NativeMethods.SetPSRunCal(id, 0);
                 NativeMethods.SetPSControl(id, 1, 0, 0, 0);
+                // Restore CESSB/osctrl ON — Brian's default for non-PS voice
+                // SSB (~1-1.5 dB average power; bd zeus-5cg). Only held off
+                // while PS is armed (see the enable branch above).
+                NativeMethods.SetTXAosctrlRun(id, 1);
             }
         }
         _log.LogInformation("wdsp.setPsEnabled enabled={Enabled}", enabled);
