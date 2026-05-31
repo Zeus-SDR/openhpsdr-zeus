@@ -63,6 +63,7 @@ import { ModePanel } from './panels/ModePanel';
 import { StepPanel } from './panels/StepPanel';
 import { MeterGroupPanel } from '../components/meter-group/MeterGroupPanel';
 import { AnalogMeterPanel } from './panels/AnalogMeterPanel';
+import { WavRecorderPanel } from './panels/WavRecorderPanel';
 
 export type PanelCategory =
   | 'spectrum'
@@ -306,6 +307,14 @@ export const PANELS: Record<string, PanelDef> = {
     component: MeterGroupPanel,
     multiInstance: true,
     headerless: true,
+  },
+  wavrecorder: {
+    id: 'wavrecorder',
+    name: 'Tape Deck · WAV Recorder',
+    category: 'tools',
+    tags: ['recorder', 'wav', 'tape', 'record', 'playback', 'audio', 'reel'],
+    component: WavRecorderPanel,
+    maxW: 4,
   },
   analogmeter: {
     id: 'analogmeter',

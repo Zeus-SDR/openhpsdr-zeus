@@ -275,6 +275,12 @@ public static class ZeusHost
         // host and headless — see CwDecoderService.
         builder.Services.AddSingleton<CwDecoderService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<CwDecoderService>());
+        // WAV recorder/player: taps DspPipelineService RX + TX-monitor audio to
+        // record float32 WAVs (default save folder = Downloads) and plays them
+        // back locally via the audition sink. Over-the-air playback is layered
+        // on later. Singleton resolved on first /api/wav call; its ctor wires
+        // the pipeline event subscriptions.
+        builder.Services.AddSingleton<Zeus.Server.Wav.WavRecorderService>();
         // PS auto-attenuate timer2code-equivalent: ramps the radio's TX step
         // attenuator (Protocol2 only today) when calcc feedback level lands outside
         // the 128..181 ideal window, so PS has a recovery path on first arm. Idle

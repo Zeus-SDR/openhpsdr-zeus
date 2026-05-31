@@ -111,6 +111,10 @@ public sealed class TxAudioIngest : IDisposable
     // enough that a genuine fallback to mic happens instantly after TCI stops.
     private const int TciHysteresisMs = 500;
     private long _lastTciTickMs;
+    // WAV-playback-source recency: set on every OnMicPcmBytesFromWav call so a
+    // concurrent native-mic frame within TciHysteresisMs is suppressed — the
+    // recording replaces the live mic on the air, they never mix.
+    private long _lastWavTickMs;
     // Diagnostic: log peak of mic-in and IQ-out once per second of TX. If
     // mic-peak is high but iq-peak is ~0, WDSP TXA is producing silence
     // despite good input. If mic-peak itself is ~0, the uplink is broken.
@@ -173,6 +177,12 @@ public sealed class TxAudioIngest : IDisposable
     // not. Mirror the Interlocked.Exchange pattern used for _txChronoTimer.
     internal void SetWdspConsumedCallback(Action<int>? cb)
         => Interlocked.Exchange(ref _onWdspConsumed, cb);
+
+    /// <summary>Raised for every valid mic block (960 samples f32le @ 48 kHz)
+    /// as it enters the ingest, before any MOX/monitor gating. The WAV recorder
+    /// taps this to capture the raw transmit-side mic audio silently. Payload
+    /// is valid only for the synchronous handler — copy if retained.</summary>
+    internal event Action<ReadOnlyMemory<byte>>? MicPcmTapped;
     public long TotalMicSamples { get { lock (_sync) return _totalMicSamples; } }
     public long TotalTxBlocks { get { lock (_sync) return _totalTxBlocks; } }
     public long DroppedFrames { get { lock (_sync) return _droppedFrames; } }
@@ -203,9 +213,23 @@ public sealed class TxAudioIngest : IDisposable
     /// </summary>
     internal void OnMicPcmBytesFromMic(ReadOnlyMemory<byte> f32lePayload)
     {
+        long now = Environment.TickCount64;
         long lastTci = Volatile.Read(ref _lastTciTickMs);
-        if (lastTci != 0 && Environment.TickCount64 - lastTci < TciHysteresisMs)
-            return;
+        if (lastTci != 0 && now - lastTci < TciHysteresisMs) return;
+        long lastWav = Volatile.Read(ref _lastWavTickMs);
+        if (lastWav != 0 && now - lastWav < TciHysteresisMs) return;
+        OnMicPcmBytes(f32lePayload);
+    }
+
+    /// <summary>Source-tagged entry point for WAV-recording playback to the
+    /// air (from <see cref="Zeus.Server.Wav.WavRecorderService"/>). Stamps the
+    /// WAV recency timestamp so the live native mic is suppressed for the clip,
+    /// then feeds the block through the same path as mic audio — so a recording
+    /// is processed by the normal TX chain exactly like live speech. The caller
+    /// keys MOX; this method does not touch MOX.</summary>
+    internal void OnMicPcmBytesFromWav(ReadOnlyMemory<byte> f32lePayload)
+    {
+        Volatile.Write(ref _lastWavTickMs, Environment.TickCount64);
         OnMicPcmBytes(f32lePayload);
     }
 
@@ -217,6 +241,13 @@ public sealed class TxAudioIngest : IDisposable
             lock (_sync) _droppedFrames++;
             return;
         }
+
+        // Non-destructive mic tap, fired BEFORE the MOX/monitor gate so a
+        // recorder can capture the raw mic whether or not the operator is
+        // keyed or monitoring (silent capture). Covers desktop native mic,
+        // browser mic, and TCI — every source funnels through here. The event
+        // is null (no allocation/cost) unless something is actually recording.
+        MicPcmTapped?.Invoke(f32lePayload);
 
         // Gate: process mic samples when MOX is on (normal TX) OR when the TX
         // monitor is on (audition without keying so the operator can hear

@@ -60,7 +60,7 @@ public class DspPipelineService : BackgroundService,
 {
     private const int Width = 2048;
     private const int SyntheticSampleRateHz = 192_000;
-    private const int AudioOutputRateHz = 48_000;
+    public const int AudioOutputRateHz = 48_000;
     private const int AudioDrainCapacity = 2048;
     private static readonly TimeSpan TickPeriod = TimeSpan.FromMilliseconds(1000.0 / 30.0);
 
