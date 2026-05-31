@@ -8,33 +8,34 @@ Verified on: **Raspberry Pi 4 (4 GB), Debian 13 (trixie) arm64**, kernel
 
 ---
 
-## One-command deploy (from your Mac/Linux dev machine)
+## Get Zeus onto the Pi (headless server)
+
+Grab the prebuilt **linux-arm64 tarball** from the
+[Releases page](https://github.com/Kb2uka/openhpsdr-zeus/releases) —
+`openhpsdr-zeus-<ver>-linux-arm64.tar.gz` — and copy it to the Pi:
 
 ```bash
-# Full build + deploy to the Pi
-bash installers/deploy-rpi.sh emu-agon.local
-
-# Build locally only (produces publish-rpi/ in the repo root)
-bash installers/deploy-rpi.sh emu-agon.local --build-only
-
-# Re-deploy an existing bundle (skip publish step)
-bash installers/deploy-rpi.sh emu-agon.local --deploy-only
+scp openhpsdr-zeus-<ver>-linux-arm64.tar.gz <user>@<pi>:~
+ssh <user>@<pi>
+mkdir -p ~/zeus-rpi && tar xzf ~/openhpsdr-zeus-<ver>-linux-arm64.tar.gz -C ~/zeus-rpi
 ```
 
-The script:
-1. Builds the frontend into `wwwroot` (`npm run build`)
-2. Runs `dotnet publish -r linux-arm64 --self-contained`
-3. Checks / installs `libfftw3-double3` on the Pi via SSH
-4. `rsync`s the bundle to `~/zeus-rpi/` on the Pi
+The tarball is **self-contained** — no `.NET` install needed on the Pi.
 
-The bundle is **self-contained** — no `.NET` install needed on the Pi.
+Prefer to build from source? From a Mac/Linux dev machine:
+
+```bash
+npm --prefix zeus-web run build
+dotnet publish OpenhpsdrZeus -c Release -r linux-arm64 --self-contained -o publish-rpi
+scp -r publish-rpi/ <user>@<pi>:~/zeus-rpi/
+```
 
 ---
 
 ## Starting Zeus on the Pi
 
 ```bash
-ssh rampa@emu-agon.local
+ssh <user>@<pi>
 ZEUS_PORT=6060 ~/zeus-rpi/OpenhpsdrZeus
 ```
 
@@ -50,8 +51,7 @@ This takes a few minutes; subsequent starts are instant.
 - **64-bit OS mandatory** — `linux-arm64` does not run on 32-bit Raspberry
   Pi OS. Use Raspberry Pi OS 64-bit or Debian arm64 (trixie or later).
 - **`libfftw3-double3`** — the only runtime dependency not bundled.
-  On Debian 13 it is usually pre-installed; the deploy script installs it
-  if missing.
+  On Debian 13 it is usually pre-installed; install it manually if missing.
 
 ```bash
 sudo apt-get install -y libfftw3-double3
@@ -106,7 +106,7 @@ sudo apt-get install -y libwebkit2gtk-4.1-0
 **SSH X forwarding (window appears on your Mac/Linux machine):**
 ```bash
 # On your local machine:
-ssh -X rampa@<pi-ip>
+ssh -X <user>@<pi>
 # Then on the Pi:
 ./OpenhpsdrZeus-<ver>-linux-aarch64.AppImage --appimage-extract-and-run
 ```
