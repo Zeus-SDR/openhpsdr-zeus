@@ -1,9 +1,7 @@
-# Deploying Zeus headless on a Raspberry Pi 4
+# Deploying Zeus on a Raspberry Pi 4
 
-Zeus runs on a Raspberry Pi 4 (arm64) as a headless radio server — .NET
-backend on one end, HL2 on the other, browser UI served over the LAN.
-The `libwdsp.so` ARM64 binary already ships in the repo
-(`Zeus.Dsp/runtimes/linux-arm64/native/`); no native compilation is needed.
+Zeus runs on a Raspberry Pi 4 (arm64) either as a headless radio server
+(browser UI over LAN) or as a full desktop app via the AppImage.
 
 Verified on: **Raspberry Pi 4 (4 GB), Debian 13 (trixie) arm64**, kernel
 6.12, Ethernet, HL2 connected on the same LAN segment.
@@ -89,11 +87,49 @@ disable WiFi via `raspi-config` → System Options → Wireless LAN → disable.
 
 ---
 
-## Desktop (Photino) mode
+## Desktop (Photino) mode via AppImage
 
-Photino on `linux-arm64` requires `libwebkit2gtk` and a display. On a
-headless Pi this is impractical. **Always run without the `--desktop` flag**
-(web/service mode). The browser is the UI.
+The arm64 AppImage (`OpenhpsdrZeus-<ver>-linux-aarch64.AppImage`) runs
+the full Photino native window on the Pi. Verified working on Debian 13
+arm64 with a local display and via SSH X forwarding to macOS XQuartz.
+
+**Requirements:**
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-0
+```
+
+**Local display (monitor connected to Pi):**
+```bash
+./OpenhpsdrZeus-<ver>-linux-aarch64.AppImage --appimage-extract-and-run
+```
+
+**SSH X forwarding (window appears on your Mac/Linux machine):**
+```bash
+# On your local machine:
+ssh -X rampa@<pi-ip>
+# Then on the Pi:
+./OpenhpsdrZeus-<ver>-linux-aarch64.AppImage --appimage-extract-and-run
+```
+
+If the window doesn't open over X forwarding, WebKitGTK GPU acceleration
+may be failing. Add these env vars to force software rendering:
+```bash
+WEBKIT_DISABLE_DMABUF_RENDERER=1 \
+WEBKIT_DISABLE_COMPOSITING_MODE=1 \
+LIBGL_ALWAYS_SOFTWARE=1 \
+GDK_BACKEND=x11 \
+./OpenhpsdrZeus-<ver>-linux-aarch64.AppImage --appimage-extract-and-run
+```
+
+**Default audio device** — miniaudio picks the ALSA default (usually the
+first card, often HDMI). To point it at a USB audio device (card 2):
+```bash
+cat > ~/.asoundrc << 'EOF'
+pcm.!default { type hw; card 2 }
+ctl.!default { type hw; card 2 }
+EOF
+```
+Check card numbers with `aplay -l`.
 
 ---
 
