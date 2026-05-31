@@ -429,12 +429,58 @@ jobs:
           name: wdsp-native-osx-arm64
           path: staged/osx-arm64/
 
+  build-native-linux-arm64:
+    name: Build native miniaudio (linux-arm64, cross-compile)
+    needs: determine-version
+    # Cross-compile on the ubuntu-22.04 x64 runner using aarch64-linux-gnu-gcc
+    # (glibc 2.35 build host → compatible with Debian 12+, RPi OS Bookworm+).
+    # Only libminiaudio.so is built here — libwdsp.so for arm64 is committed
+    # under Zeus.Dsp/runtimes/linux-arm64/native/ and ships as-is.
+    # miniaudio has no external deps (ALSA/PA/JACK loaded at runtime via
+    # dlopen), so the cross-compile is straightforward.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install aarch64 cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu cmake build-essential
+
+      - name: Cross-compile libminiaudio for arm64
+        run: |
+          cmake -S native/miniaudio -B native/build-miniaudio-arm64 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64
+          cmake --build native/build-miniaudio-arm64 --config Release --parallel
+
+      - name: Verify arm64 binary
+        run: |
+          file native/build-miniaudio-arm64/libminiaudio.so
+          aarch64-linux-gnu-objdump -p native/build-miniaudio-arm64/libminiaudio.so | grep NEEDED
+
+      - name: Stage
+        run: |
+          mkdir -p staged/linux-arm64
+          cp native/build-miniaudio-arm64/libminiaudio.so staged/linux-arm64/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wdsp-native-linux-arm64
+          path: staged/linux-arm64/
+
   build-release:
     name: Build (${{ matrix.config.os }})
     needs:
       - determine-version
       - build-native-windows
       - build-native-linux
+      - build-native-linux-arm64
       - build-native-macos
     runs-on: ${{ matrix.config.runner }}
     strategy:
@@ -481,7 +527,7 @@ jobs:
             artifact: linux-arm64-tarball
             appimage_artifact: linux-arm64-appimage
             build_appimage: 'true'
-            uses_committed_native: 'true'
+            uses_committed_native: 'false'
           - os: macos-arm64
             runner: macos-latest  # Apple Silicon
             rid: osx-arm64
@@ -511,7 +557,7 @@ jobs:
             win-arm64)  echo "name=wdsp-native-win-arm64"  >> "$GITHUB_OUTPUT" ;;
             linux-x64)  echo "name=wdsp-native-linux-x64"  >> "$GITHUB_OUTPUT" ;;
             osx-arm64)  echo "name=wdsp-native-osx-arm64"  >> "$GITHUB_OUTPUT" ;;
-            linux-arm64) echo "name=committed" >> "$GITHUB_OUTPUT" ;;
+            linux-arm64) echo "name=wdsp-native-linux-arm64" >> "$GITHUB_OUTPUT" ;;
             *) echo "::error::No native artifact mapped for RID ${{ matrix.config.rid }}"; exit 1 ;;
           esac
 
@@ -520,8 +566,9 @@ jobs:
       # committed at the tag SHA. This is what makes releases immune to
       # stale-committed-natives drift — the binaries that ship are always
       # built from the exact source the tag points at.
-      # Skipped for linux-arm64: no dedicated arm64 native build job exists
-      # yet — the committed libwdsp.so arm64 ships as-is.
+      # Downloads libwdsp.so + libminiaudio.so for most RIDs. For linux-arm64
+      # the artifact only contains libminiaudio.so (cross-compiled); libwdsp.so
+      # is committed and stays in place alongside it.
       - name: Download fresh native WDSP for ${{ matrix.config.rid }}
         if: matrix.config.uses_committed_native != 'true'
         uses: actions/download-artifact@v4

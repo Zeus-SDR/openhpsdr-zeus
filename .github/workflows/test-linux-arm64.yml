@@ -24,6 +24,23 @@ jobs:
           ls -lh Zeus.Dsp/runtimes/linux-arm64/native/
           file Zeus.Dsp/runtimes/linux-arm64/native/libwdsp.so
 
+      - name: Install aarch64 cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu cmake build-essential
+
+      - name: Cross-compile libminiaudio for arm64
+        run: |
+          cmake -S native/miniaudio -B native/build-miniaudio-arm64 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64
+          cmake --build native/build-miniaudio-arm64 --config Release --parallel
+          file native/build-miniaudio-arm64/libminiaudio.so
+          cp native/build-miniaudio-arm64/libminiaudio.so \
+             Zeus.Dsp/runtimes/linux-arm64/native/libminiaudio.so
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
