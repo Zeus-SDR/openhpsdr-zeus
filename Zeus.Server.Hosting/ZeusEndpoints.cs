@@ -124,6 +124,49 @@ public static class ZeusEndpoints
             return Results.BadRequest(new { error = err });
         });
 
+        // WAV recorder / player. Records RX or processed-TX audio to float32
+        // WAVs in the Downloads folder, and plays recordings back to the local
+        // monitor (no keying). Over-the-air playback is a later layer.
+        app.MapGet("/api/wav/status", (Zeus.Server.Wav.WavRecorderService wav) =>
+            Results.Ok(wav.GetStatus()));
+        app.MapGet("/api/wav/list", (Zeus.Server.Wav.WavRecorderService wav) =>
+            Results.Ok(new { dir = wav.RecordingsDir, recordings = wav.ListRecordings() }));
+        app.MapPost("/api/wav/record/start",
+            (WavRecordStartRequest body, Zeus.Server.Wav.WavRecorderService wav) =>
+        {
+            var source = string.Equals(body?.Source, "tx", StringComparison.OrdinalIgnoreCase)
+                ? Zeus.Server.Wav.WavRecordSource.Tx
+                : Zeus.Server.Wav.WavRecordSource.Rx;
+            try { return Results.Ok(new { file = wav.StartRecording(source) }); }
+            catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+        });
+        app.MapPost("/api/wav/record/stop", (Zeus.Server.Wav.WavRecorderService wav) =>
+        {
+            var r = wav.StopRecording();
+            return r is { } x
+                ? Results.Ok(new { file = Path.GetFileName(x.Path), samples = x.Samples })
+                : Results.Ok(new { file = (string?)null, samples = 0L });
+        });
+        app.MapPost("/api/wav/play",
+            (WavPlayRequest body, Zeus.Server.Wav.WavRecorderService wav) =>
+        {
+            if (string.IsNullOrWhiteSpace(body?.File))
+                return Results.BadRequest(new { error = "file is required" });
+            try { wav.Play(body.File); return Results.Ok(wav.GetStatus()); }
+            catch (FileNotFoundException) { return Results.NotFound(new { error = "recording not found" }); }
+            catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+        });
+        app.MapPost("/api/wav/stop", (Zeus.Server.Wav.WavRecorderService wav) =>
+        {
+            wav.StopPlayback();
+            return Results.Ok(wav.GetStatus());
+        });
+        app.MapDelete("/api/wav/{file}", (string file, Zeus.Server.Wav.WavRecorderService wav) =>
+        {
+            try { wav.DeleteRecording(file); return Results.Ok(new { deleted = file }); }
+            catch (FileNotFoundException) { return Results.NotFound(new { error = "recording not found" }); }
+        });
+
         app.MapGet("/api/state", (RadioService r) => r.Snapshot());
 
         // TX diagnostic — exposes the producer/consumer counts for the mic-to-IQ ring
@@ -1445,3 +1488,5 @@ internal sealed record NativeMuteRequest(bool Muted);
 internal sealed record AuditionSetRequest(bool Enabled);
 internal sealed record ChainOrderSetRequest(List<string> PluginIds);
 internal sealed record MasterBypassSetRequest(bool Bypassed);
+internal sealed record WavRecordStartRequest(string? Source);
+internal sealed record WavPlayRequest(string? File);
