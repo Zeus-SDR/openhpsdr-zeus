@@ -359,6 +359,13 @@ public static class ZeusHost
         builder.Services.AddSingleton<AudioPluginBridge>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<AudioPluginBridge>());
 
+        // RxAudioTapBridge fans the demodulated RX audio stream out to any
+        // IRxAudioTapPlugin (read-only taps — recorders, decoders). Independent
+        // of the insert chain; adds no code to the audio hot path (subscribes
+        // to the existing DspPipelineService.RxAudioAvailable event).
+        builder.Services.AddSingleton<RxAudioTapBridge>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<RxAudioTapBridge>());
+
         // AudioChainMasterBypassService — operator's "disengage the
         // whole Audio Suite" lever. Default is true (bypassed) on first
         // install so a brand-new operator's chain is inert until they
