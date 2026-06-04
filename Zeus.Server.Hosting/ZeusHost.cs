@@ -359,12 +359,18 @@ public static class ZeusHost
         builder.Services.AddSingleton<AudioPluginBridge>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<AudioPluginBridge>());
 
-        // RxAudioTapBridge fans the demodulated RX audio stream out to any
-        // IRxAudioTapPlugin (read-only taps — recorders, decoders). Independent
-        // of the insert chain; adds no code to the audio hot path (subscribes
-        // to the existing DspPipelineService.RxAudioAvailable event).
-        builder.Services.AddSingleton<RxAudioTapBridge>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<RxAudioTapBridge>());
+        // AudioTapBridge fans the RX, raw-TX-mic and processed-TX-air audio
+        // streams out to read-only plugin taps (IRxAudioTapPlugin /
+        // ITxAudioTapPlugin — recorders, decoders). Independent of the insert
+        // chain; adds no code to the audio hot paths (subscribes to events
+        // those paths already raise).
+        builder.Services.AddSingleton<AudioTapBridge>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<AudioTapBridge>());
+
+        // PluginPlaybackSink lets a plugin play a clip locally (audition) or
+        // inject it on the air (TX chain, under operator MOX). Surfaced to
+        // plugins via IPluginContext.Playback.
+        builder.Services.AddSingleton<Zeus.Plugins.Contracts.Audio.IAudioPlaybackSink, PluginPlaybackSink>();
 
         // AudioChainMasterBypassService — operator's "disengage the
         // whole Audio Suite" lever. Default is true (bypassed) on first
