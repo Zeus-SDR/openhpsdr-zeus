@@ -31,7 +31,9 @@ public sealed class AudioPluginBridge : IHostedService, IAsyncDisposable
     private readonly IVstBridgeNative _vstBridge;
     private readonly Func<bool> _isMoxOn;
     private readonly Func<bool> _isMonitorOn;
+    private readonly Func<bool> _isTciTxAudioActive;
     private readonly IAuditionAudioSink _audition;
+    private int _remoteBypassLogCount; // for one-time diagnostic log during verification/on-air testing
     private readonly ChainOrderService? _chainOrder;
     private readonly ILogger<AudioPluginBridge> _log;
     private readonly AudioChain _chain = new();
@@ -63,13 +65,15 @@ public sealed class AudioPluginBridge : IHostedService, IAsyncDisposable
         TxService tx,
         IAuditionAudioSink audition,
         ChainOrderService chainOrder,
-        ILogger<AudioPluginBridge> log)
+        ILogger<AudioPluginBridge> log,
+        TxAudioIngest txAudioIngest)
         : this(manager, pipeline, new VstBridgeNative(),
                isMoxOn: () => tx.IsMoxOn,
                isMonitorOn: () => pipeline.CurrentEngine?.IsTxMonitorOn ?? false,
                audition: audition,
                chainOrder: chainOrder,
-               log) { }
+               log,
+               isTciTxAudioActive: () => txAudioIngest.IsTciTxAudioActive) { }
 
     // Testable ctor — lets unit tests inject a fake IVstBridgeNative and
     // plain delegates for the MOX / monitor lookups so tests don't need
@@ -82,13 +86,15 @@ public sealed class AudioPluginBridge : IHostedService, IAsyncDisposable
         Func<bool> isMonitorOn,
         IAuditionAudioSink audition,
         ChainOrderService? chainOrder,
-        ILogger<AudioPluginBridge> log)
+        ILogger<AudioPluginBridge> log,
+        Func<bool>? isTciTxAudioActive = null)
     {
         _manager = manager;
         _pipeline = pipeline;
         _vstBridge = vstBridge;
         _isMoxOn = isMoxOn;
         _isMonitorOn = isMonitorOn;
+        _isTciTxAudioActive = isTciTxAudioActive ?? (() => false);
         _audition = audition;
         _chainOrder = chainOrder;
         _log = log;
@@ -107,13 +113,15 @@ public sealed class AudioPluginBridge : IHostedService, IAsyncDisposable
         ILogger<AudioPluginBridge> log,
         IAuditionAudioSink? audition = null,
         bool previewEnabled = true,
-        bool engineIsWdsp = true)
+        bool engineIsWdsp = true,
+        Func<bool>? isTciTxAudioActive = null)
     {
         _manager = null!;
         _pipeline = null!;
         _vstBridge = null!;
         _isMoxOn = isMoxOn;
         _isMonitorOn = isMonitorOn;
+        _isTciTxAudioActive = isTciTxAudioActive ?? (() => false);
         _audition = audition ?? new NoOpAuditionAudioSink();
         _chainOrder = null;
         _log = log;
@@ -141,6 +149,14 @@ public sealed class AudioPluginBridge : IHostedService, IAsyncDisposable
 
     /// <summary>Current master bypass state (mirrors <c>AudioChain.MasterBypassed</c>).</summary>
     public bool IsMasterBypassed => _chain.MasterBypassed;
+
+    /// <summary>
+    /// True if the TX insert plugin chain (Audio Suite) is currently being
+    /// bypassed because the active TX audio source is remote (e.g. TCI client).
+    /// This is independent of the operator's master bypass toggle.
+    /// Intended for diagnostics and potential future UI ("plugins bypassed for remote TX").
+    /// </summary>
+    public bool IsBypassedForRemoteTxSource => _isTciTxAudioActive();
 
     public Task StartAsync(CancellationToken ct)
     {
@@ -221,9 +237,32 @@ public sealed class AudioPluginBridge : IHostedService, IAsyncDisposable
         int channels,
         int sampleRate)
     {
+        // Remote TCI (or future remote) TX audio source: bypass the entire
+        // operator Audio Suite insert chain. The remote client has already
+        // processed (or deliberately left clean) the audio it wants on the air.
+        // Local mic and WAV playback continue to use the chain.
+        if (_chain.MasterBypassed || _isTciTxAudioActive())
+        {
+            if (!_chain.MasterBypassed && _isTciTxAudioActive() && Interlocked.Increment(ref _remoteBypassLogCount) == 1)
+            {
+                _log.LogInformation("TX audio plugin chain bypassed for remote TCI source (IsBypassedForRemoteTxSource=true). Local mic path unaffected.");
+            }
+            input.CopyTo(output);
+            return;
+        }
+
         var ctx = new AudioBlockContext(sampleRate, channels, frames, sampleTime: 0, mox: true);
         _chain.Process(input, output, ctx);
     }
+
+    /// <summary>
+    /// Test-only hook to drive the on-air TX audio plugin handler path
+    /// (the one invoked via the TxAudioBlockHandler from WdspDspEngine.ProcessTxBlock
+    /// during MOX). Respects both master bypass and the remote TCI source bypass.
+    /// Never allocate, never for production code.
+    /// </summary>
+    internal void ProcessTxForTest(ReadOnlySpan<float> input, Span<float> output, int frames, int channels = 1, int sampleRate = 48000)
+        => Process(input, output, frames, channels, sampleRate);
 
     /// <summary>
     /// Live mic preview entry point. Called from <c>NativeMicCapture</c>
