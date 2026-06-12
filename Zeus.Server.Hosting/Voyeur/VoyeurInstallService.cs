@@ -53,10 +53,12 @@ public sealed class VoyeurInstallService
     // small.en is the lighter default; medium.en is the Phase-0 accuracy pick.
     private static readonly Dictionary<string, (string Url, long MinBytes, string Label)> Models = new()
     {
-        ["small.en"] = ("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin",
-                        400_000_000, "Small (English) — ~0.5 GB, fast"),
+        // Medium first = the recommended default (Phase-0 spike: small misses
+        // a lot on noisy SSB; medium is the accuracy pick).
         ["medium.en"] = ("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin",
-                         1_300_000_000, "Medium (English) — ~1.5 GB, most accurate"),
+                         1_300_000_000, "Medium (English) — ~1.5 GB, recommended (best accuracy)"),
+        ["small.en"] = ("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin",
+                        400_000_000, "Small (English) — ~0.5 GB, faster download, less accurate"),
     };
 
     public VoyeurInstallService(

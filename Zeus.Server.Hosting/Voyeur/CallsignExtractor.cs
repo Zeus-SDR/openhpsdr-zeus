@@ -106,17 +106,27 @@ public static partial class CallsignExtractor
         }
     }
 
-    // Build maximal runs of decodable callsign characters: phonetic words →
-    // letters, digit words → digits, bare single letters and bare digits pass
-    // through, and an already-collapsed "wa2"/"n2zkn"-style token is kept.
-    // A non-callsign word OR a sentence terminator (. ! ? ;) between tokens
-    // breaks the run — the latter so two calls spoken back-to-back across a
-    // sentence boundary don't merge into one. Commas and hyphens do NOT break
-    // (they appear mid-callsign in net-control readbacks).
+    // Longest a decoded run can grow before we flush it — caps weak-word
+    // absorption so a callsign readback can't swallow the rest of a sentence.
+    // (2 prefix + 2 digit + 4 suffix + slack.)
+    private const int MaxRunLength = 9;
+
+    // Build runs of decodable callsign characters. STRONG tokens — exact NATO
+    // phonetic words, digit words, bare single letters/digits, already-collapsed
+    // "wa2"/"n2zkn" tokens — always contribute. WEAK tokens (any other spoken
+    // word) contribute their FIRST LETTER, but ONLY once the run already holds a
+    // real NATO phonetic: that's how hams' CUSTOM phonetics are handled
+    // ("Kilo Echo 8 Jolly Shikers" → KE8 + J + S = KE8JS), since a custom
+    // phonetic always starts with the letter it stands for. Requiring a real
+    // phonetic first keeps ordinary conversation ("I got 8 of them") from
+    // manufacturing callsigns — and QRZ validation filters whatever slips
+    // through. A sentence terminator (. ! ? ;) or the length cap flushes the run.
     private static IEnumerable<string> DecodeRuns(string text)
     {
         var run = new System.Text.StringBuilder();
+        bool strong = false; // run contains ≥1 exact NATO phonetic word
         int prevEnd = -1;
+
         foreach (Match tok in TokenRegex().Matches(text))
         {
             if (run.Length > 0 && prevEnd >= 0)
@@ -126,26 +136,40 @@ public static partial class CallsignExtractor
                 {
                     yield return run.ToString();
                     run.Clear();
+                    strong = false;
                 }
             }
             prevEnd = tok.Index + tok.Length;
 
             var t = tok.Value;
             string? piece = null;
-            if (Phon.TryGetValue(t, out var pc)) piece = pc.ToString();
+            bool isPhonetic = false;
+            if (Phon.TryGetValue(t, out var pc)) { piece = pc.ToString(); isPhonetic = true; }
             else if (Digit.TryGetValue(t, out var dc)) piece = dc.ToString();
             else if (t.Length == 1 && char.IsLetter(t[0])) piece = char.ToUpperInvariant(t[0]).ToString();
             else if (t.Length == 1 && char.IsDigit(t[0])) piece = t;
-            else if (IsCollapsedPrefix(t)) piece = t.ToUpperInvariant();
+            else if (IsCollapsedPrefix(t)) { piece = t.ToUpperInvariant(); isPhonetic = true; }
+            else if (run.Length > 0 && strong && char.IsLetter(t[0]))
+                // WEAK word inside an active callsign readback → custom phonetic,
+                // take its first letter.
+                piece = char.ToUpperInvariant(t[0]).ToString();
 
             if (piece is not null)
             {
                 run.Append(piece);
+                if (isPhonetic) strong = true;
+                if (run.Length >= MaxRunLength)
+                {
+                    yield return run.ToString();
+                    run.Clear();
+                    strong = false;
+                }
             }
             else if (run.Length > 0)
             {
                 yield return run.ToString();
                 run.Clear();
+                strong = false;
             }
         }
         if (run.Length > 0) yield return run.ToString();

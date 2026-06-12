@@ -83,4 +83,24 @@ public class CallsignExtractorTests
         var calls = CallsignExtractor.Extract("I worked one or two stations, nothing in close");
         Assert.Empty(calls);
     }
+
+    [Theory]
+    // Custom / non-NATO phonetics — common in ham nets. The first letter of each
+    // spoken word is the callsign character; the real NATO words ("Kilo Echo")
+    // mark it as a readback so the custom words get absorbed.
+    [InlineData("this is Kilo Echo 8 Jolly Whiskers, looking for check-ins", "KE8JW")]
+    [InlineData("Whiskey Alpha 2 Denver Victor", "WA2DV")]
+    public void DecodesCustomPhonetics(string transcript, string expected)
+    {
+        Assert.Contains(expected, CallsignExtractor.Extract(transcript));
+    }
+
+    [Fact]
+    public void ConversationWithDigitsButNoPhonetics_YieldsNoConfidentCall()
+    {
+        // No NATO phonetic present → weak first-letter absorption is NOT armed,
+        // so ordinary talk around a number doesn't manufacture a callsign.
+        var calls = CallsignExtractor.Extract("I got 8 of them in the log, nothing much else going on");
+        Assert.Empty(calls);
+    }
 }

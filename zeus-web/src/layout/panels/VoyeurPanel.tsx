@@ -73,7 +73,7 @@ export function VoyeurPanel({ onRemove }: PanelComponentProps) {
   const [modelDir, setModelDir] = useState<string>('');
   const [showHelp, setShowHelp] = useState(false);
   const [models, setModels] = useState<VoyeurModel[]>([]);
-  const [chosenModel, setChosenModel] = useState('small.en');
+  const [chosenModel, setChosenModel] = useState('medium.en');
   const [install, setInstall] = useState<VoyeurInstall | null>(null);
   const editingRef = useRef<HTMLInputElement | null>(null);
 
@@ -326,6 +326,79 @@ export function VoyeurPanel({ onRemove }: PanelComponentProps) {
             {showHelp ? 'Hide setup' : 'How to set up & use'}
           </button>
         </div>
+
+        {/* Prominent model-download control whenever transcription is off — so
+            the primary setup action isn't buried in the help disclosure. */}
+        {asrReady === false && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 8px',
+              marginBottom: 8,
+              borderRadius: 4,
+              background: 'var(--panel-bot)',
+              border: '1px solid var(--panel-top)',
+              fontSize: 11,
+            }}
+          >
+            {install?.phase === 'Downloading' ? (
+              <>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      height: 6,
+                      borderRadius: 3,
+                      background: 'var(--panel-top)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${install.percent}%`,
+                        height: '100%',
+                        background: 'var(--accent)',
+                        transition: 'width 0.4s',
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>
+                    {install.message}
+                  </div>
+                </div>
+                <button type="button" className="btn sm tx" onClick={onCancelInstall}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <span style={{ opacity: 0.8 }}>Download a speech model to enable transcription:</span>
+                <select
+                  value={chosenModel}
+                  onChange={(e) => setChosenModel(e.target.value)}
+                  aria-label="Speech model"
+                  style={{ flex: 1, minWidth: 0 }}
+                >
+                  {(models.length
+                    ? models
+                    : [
+                        { id: 'medium.en', label: 'Medium — recommended' },
+                        { id: 'small.en', label: 'Small — faster download' },
+                      ]
+                  ).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn sm accent" onClick={onInstall}>
+                  Download
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {showHelp && (
           <div
