@@ -27,6 +27,7 @@ export type VoyeurStatus = {
   droppedSamples: number;
   ringFillPct: number;
   degraded: boolean;
+  transcriptionAvailable: boolean;
 };
 
 export type VoyeurSession = {
@@ -54,6 +55,8 @@ export type VoyeurSegment = {
   callsign: string | null;
   // "confirmed" | "tentative" | "unknown" (Phase 2 — null in Phase 1)
   callsignState: string | null;
+  // QRZ operator name when confirmed (roster enrichment).
+  callsignName: string | null;
 };
 
 export type VoyeurSessionDetail = {
@@ -76,8 +79,41 @@ async function json<T>(input: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+export type VoyeurTranscription = { available: boolean; modelDir: string };
+
 export const getVoyeurStatus = (signal?: AbortSignal) =>
   json<VoyeurStatus>('/api/voyeur/status', { signal });
+
+export const getVoyeurTranscription = (signal?: AbortSignal) =>
+  json<VoyeurTranscription>('/api/voyeur/transcription', { signal });
+
+export type VoyeurModel = { id: string; label: string };
+
+export type VoyeurInstall = {
+  phase: 'Idle' | 'Downloading' | 'Done' | 'Error';
+  percent: number;
+  message: string;
+  item: string | null;
+  modelPresent: boolean;
+  binaryPresent: boolean;
+  rid: string;
+};
+
+export const getVoyeurModels = (signal?: AbortSignal) =>
+  json<VoyeurModel[]>('/api/voyeur/install/models', { signal });
+
+export const getVoyeurInstallStatus = (signal?: AbortSignal) =>
+  json<VoyeurInstall>('/api/voyeur/install/status', { signal });
+
+export const installVoyeurModel = (model: string) =>
+  json<VoyeurInstall>('/api/voyeur/install/model', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ model }),
+  });
+
+export const cancelVoyeurInstall = () =>
+  json<VoyeurInstall>('/api/voyeur/install/cancel', { method: 'POST' });
 
 export const startVoyeur = (keepAudio = true) =>
   json<VoyeurStatus>('/api/voyeur/start', {
