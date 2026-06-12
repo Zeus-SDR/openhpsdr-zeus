@@ -410,15 +410,31 @@
 .voyeur-digestbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 8px;
+}
+.voyeur-digestbar__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 .voyeur-digestbar__label {
   font-family: var(--font-display);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--fg-2);
+}
+.voyeur-digestbar__sub {
+  font-size: 10px;
+  line-height: 1.4;
   color: var(--fg-3);
+}
+.voyeur-digestbar .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .voyeur-digestbar__hint {
   font-size: 10px;

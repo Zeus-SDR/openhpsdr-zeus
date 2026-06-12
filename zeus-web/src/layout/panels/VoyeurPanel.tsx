@@ -368,15 +368,26 @@ export function VoyeurPanel({ onRemove }: PanelComponentProps) {
           <span className="chip mono"><span className="k">cap</span><span className="v">{fmtDur(r.session.capturedSeconds)}</span></span>
         </div>
         <div className="voyeur-digestbar">
-          <span className="voyeur-digestbar__label">Digest</span>
+          <div className="voyeur-digestbar__text">
+            <span className="voyeur-digestbar__label">AI Summary</span>
+            <span className="voyeur-digestbar__sub">
+              Plain-English recap of who ran the net and what was discussed —
+              written locally on your machine from this log’s transcript.
+            </span>
+          </div>
           {digestReady ? (
             <button
               type="button"
               className="btn sm accent"
               disabled={digestBusy === id}
               onClick={() => onGenerateDigest(id)}
+              title="Summarize this net’s transcript into a short recap (runs locally, nothing leaves your machine)"
             >
-              {digestBusy === id ? 'Summarizing…' : r.digest ? 'Regenerate' : 'Generate'}
+              {digestBusy === id
+                ? 'Summarizing…'
+                : r.digest
+                  ? 'Regenerate summary'
+                  : 'Summarize this net'}
             </button>
           ) : (
             <span className="voyeur-digestbar__hint">
