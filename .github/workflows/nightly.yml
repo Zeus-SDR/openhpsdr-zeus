@@ -36,7 +36,7 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       mode: nightly
-      ref: develop
+      ref: main
     # Reusable-workflow calls do NOT pass repo secrets unless the caller
     # inherits them. release.yml's macOS signing step (gated on
     # is-nightly=='true') reads secrets.MACOS_CERTIFICATE / _PWD /
