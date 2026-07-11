@@ -6,19 +6,19 @@ A browser-based SDR console for the **Hermes Lite 2** and other OpenHPSDR
 radios. .NET 10 backend talks Protocol-1 / Protocol-2 to the radio and streams
 IQ / audio / meter data to a React + WebGL frontend over WebSocket.
 
-> Status: early but working.
->
-> - **Hermes Lite 2 (Protocol-1):** RX is solid; TX is operator-verified on FM
->   and TUNE (v0.1, April 2026).
-> - **ANAN G2 / G2 MkII (Protocol-2):** RX verified on OrionMkII / fw 2.7b41
->   across 80m–10m. TX wired for TUNE and MOX — on-air carrier verified clean
->   via an external KiwiSDR. PureSignal converging on G2 MkII. 160m not yet wired.
-> - **ANAN-100D / Angelia (Protocol-2):** RX verified; S-ATT and PRE wired to radio.
-> - Other Protocol-1 radios (older ANAN, Hermes, etc.) are not yet supported.
->
-> **Important:** OpenHPSDR Zeus has only been tested on the **Hermes Lite 2**
-> and the **ANAN G2 / G2 MkII** to date. If you have another OpenHPSDR board
-> and can help bring it up, a PR would be lovely.
+> **This repository is a historical source mirror, not the live project.**
+> Active development of Zeus continues elsewhere, and this mirror does not
+> track releases. The code here may not match the version of Zeus you have
+> installed. To download the current release, visit
+> **[zeussdr.com](https://zeussdr.com)**.
+
+## Source code for released versions
+
+Zeus is licensed under the GNU GPL v2 or later, and the complete corresponding
+source for any released version is available on request at no charge. Email
+**support@zeussdr.com** with the version number shown in the About panel, and
+we will send you the full source for that release. See the `PLUGIN-NOTICE.txt`
+file included with every install for the full written offer.
 
 ## About the name
 
@@ -67,11 +67,9 @@ Wiki jump-off points for the most-asked things:
 
 ## Download
 
-Grab the latest installer from the **[Releases page](https://github.com/Kb2uka/openhpsdr-zeus/releases/latest)**
-— Windows x64 `.exe`, Windows on ARM (Snapdragon / Surface Pro X) `.exe`, macOS `.dmg`, Linux `.tar.gz`. Full install detail (PWA path,
-macOS Gatekeeper xattr step, first-run WDSP wisdom wait) is on the wiki's
-[Installation](https://github.com/Kb2uka/openhpsdr-zeus/wiki/Installation)
-page.
+Download the current release from **[zeussdr.com](https://zeussdr.com)**.
+Installers are available for Windows x64, Windows on ARM, macOS, and Linux.
+Releases are not published in this repository.
 
 ### macOS users — read this before launching
 
@@ -127,10 +125,10 @@ uses to carry this acknowledgement through every source file.
 
 ## Contributing
 
-Bug reports, feature suggestions, and PRs welcome. Please read
-[`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a PR — it covers the
-branch model, what's red-light vs green-light, hot paths to leave alone, and
-the commit / review conventions the project follows.
+Development does not happen in this repository, so pull requests opened here
+cannot be merged. Bug reports and feature suggestions are very welcome: use
+the Submit an Issue feature inside the Zeus app, or email
+**support@zeussdr.com**.
 
 ## License
 
