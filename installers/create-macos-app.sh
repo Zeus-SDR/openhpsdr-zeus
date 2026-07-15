@@ -124,8 +124,8 @@ fi
 # grants correctly. The launcher still pins DYLD_LIBRARY_PATH before the .NET
 # runtime loads libwdsp.dylib. CFBundleIdentifier reuses the historical
 # service-mode ID
-# (com.ei6lf.zeus) so existing service-mode .app installs upgrade in
-# place. The older "com.ei6lf.zeus.desktop" bundle ID is detected and
+# so existing service-mode .app installs upgrade in
+# place. The older desktop-edition bundle ID is detected and
 # moved to the Trash by launch.sh on next start — see the cleanup block
 # in the launcher below.
 cat > "${APP_BUNDLE}/Contents/Info.plist" << EOF
@@ -138,7 +138,7 @@ cat > "${APP_BUNDLE}/Contents/Info.plist" << EOF
     <key>CFBundleIconFile</key>
     <string>Zeus</string>
     <key>CFBundleIdentifier</key>
-    <string>com.ei6lf.zeus</string>
+    <string>com.zeussdr.zeus</string>
     <key>CFBundleName</key>
     <string>OpenHPSDR Zeus</string>
     <key>CFBundleDisplayName</key>
@@ -294,7 +294,7 @@ cat > "${SERVER_APP_BUNDLE}/Contents/Info.plist" << EOF
     <key>CFBundleIconFile</key>
     <string>Zeus</string>
     <key>CFBundleIdentifier</key>
-    <string>com.ei6lf.zeus.server</string>
+    <string>com.zeussdr.zeus.server</string>
     <key>CFBundleName</key>
     <string>OpenHPSDR Zeus Server</string>
     <key>CFBundleDisplayName</key>

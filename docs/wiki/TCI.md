@@ -303,6 +303,6 @@ Zeus emits `protocol:ExpertSDR3,2.0;` to advertise TCI 2.0 surface. Most third-p
 ## Reference
 
 - **TCI 2.0 official spec PDF:** `docs/references/TCI/TCI Protocol.pdf` (Expert Electronics, 12 Jan 2024)
-- **Markdown derivative spec** (from the v2.5.1 client): https://github.com/brianbruff/TCI_SunSdr_Specification
+- **Markdown derivative spec** (from the v2.5.1 client): https://github.com/Zeus-SDR/TCI_SunSdr_Specification
 - **Test plan:** `docs/tci-test-plan.md`
 - **Source:** `Zeus.Server.Hosting/Tci/`

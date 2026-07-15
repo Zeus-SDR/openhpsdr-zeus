@@ -4,7 +4,7 @@
 
 **Status:** Draft (2026-04-28) — Architectural proposal for maintainer review
 **Related:** [Issue #106](https://github.com/Kb2uka/openhpsdr-zeus/issues/106) (websocket host isolation)
-**Authors:** Research and synthesis for Brian Keating (EI6LF) review
+**Authors:** Research and synthesis for maintainer review
 
 ---
 
@@ -18,7 +18,7 @@ Zeus currently requires all features to be compiled into the main application. T
 - **Deployment inflexibility** — Operators running Zeus on resource-constrained systems (Raspberry Pi, older laptops) cannot selectively disable heavyweight features to save CPU/RAM.
 - **Innovation pace** — Experimental features (AI voice processing, band-condition analysis, contest integrations) cannot be prototyped and shared without committing to long-term support in the core.
 
-**Issue #106 context:** Brian's comment emphasizes keeping system requirements to an "absolute minimum" and suggests "even the host would be an addon to Zeus not something that ships by default." This implies a desire for an ultra-lean core with optional subsystems, including potentially heavyweight features like the websocket host for TCI/external protocol support.
+**Issue #106 context:** The maintainer comment emphasizes keeping system requirements to an "absolute minimum" and suggests "even the host would be an addon to Zeus not something that ships by default." This implies a desire for an ultra-lean core with optional subsystems, including potentially heavyweight features like the websocket host for TCI/external protocol support.
 
 ## 2. Goals
 
@@ -893,7 +893,7 @@ Zeus includes "Install from Git" UI:
 
 #### Phase 3: Centralized registry (v2.0, future)
 
-- **GitHub repo:** `brianbruff/zeus-plugins` — curated list of vetted plugins.
+- **GitHub repo:** `Zeus-SDR/zeus-plugins` — curated list of vetted plugins.
 - **Metadata file:** `registry.json` lists plugins:
   ```json
   {
@@ -914,7 +914,7 @@ Zeus includes "Install from Git" UI:
 - **Zeus UI:** "Browse plugins" tab fetches `registry.json`, shows gallery, one-click install.
 - **Auto-update:** Periodically checks for new versions, shows "Update available" notification.
 
-**Maintenance:** Maintainer (Brian) reviews PR submissions to `zeus-plugins`, runs basic security checks (static analysis, malware scan), merges to registry.
+**Maintenance:** The maintainer reviews PR submissions to `zeus-plugins`, runs basic security checks (static analysis, malware scan), merges to registry.
 
 ### 5.8 Developer experience
 
@@ -1131,7 +1131,7 @@ public class PluginSettingsStore
 - `Zeus.Plugin.Template` NuGet package.
 - `docs.zeus-sdr.org/plugins/` site (via DocFX).
 - 5–10 sample plugins in `samples/plugins/`.
-- (v2.0) `brianbruff/zeus-plugins` registry repo.
+- (v2.0) `Zeus-SDR/zeus-plugins` registry repo.
 
 ## 7. Alternatives considered (pros/cons summary)
 
@@ -1179,7 +1179,7 @@ public class PluginSettingsStore
 **Long-term (18 months):**
 - ≥15 plugins in ecosystem (including experimental: AI DSP, logging, remote control, contest integrations).
 - ≥30% of Zeus users have ≥1 plugin installed.
-- Maintainer-vetted registry published (`brianbruff/zeus-plugins`).
+- Maintainer-vetted registry published (`Zeus-SDR/zeus-plugins`).
 - Plugin developers report "good DX" (survey or GitHub Discussions feedback).
 
 ## 10. Conclusion & recommendation
@@ -1209,4 +1209,4 @@ public class PluginSettingsStore
 
 **Document history:**
 - 2026-04-28: Initial draft (AI research + synthesis).
-- Awaiting maintainer (Brian, EI6LF) review.
+- Awaiting maintainer review.

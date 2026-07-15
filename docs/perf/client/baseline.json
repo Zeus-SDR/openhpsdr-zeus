@@ -2,9 +2,9 @@
   "_meta": {
     "captured": "2026-05-11T12:27Z",
     "branch": "feature/perf_pass_3",
-    "backend": "Brian's running Zeus.Server :6060 (HL2 connected, live RX 192 kHz LSB on 40 m)",
+    "backend": "the running reference Zeus.Server :6060 (HL2 connected, live RX 192 kHz LSB on 40 m)",
     "frontend": "Vite dev :5183 from worktree, perf_pass_3 branch HEAD c3091e1",
-    "client": "playwright MCP Chrome 147.0.7727.138, 1600x1000 viewport, second tab on backend (Brian's tab is the first)",
+    "client": "playwright MCP Chrome 147.0.7727.138, 1600x1000 viewport, second tab on backend (the reference tab is the first)",
     "window_secs": 30,
     "actual_durationMs": 37696.9,
     "notes": "Probe overhead: setInterval lag-sampler @ 25 Hz, heap sampler @ 4 Hz, rAF tick, copyToChannel wrap — small but not zero. CPU sampler ran in parallel via `top -l 7 -s 5`."

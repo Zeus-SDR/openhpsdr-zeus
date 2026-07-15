@@ -1,6 +1,6 @@
 # OpenHPSDR Zeus voice audio chain — Phase 0 master PRD
 
-**Issue:** [#332](https://github.com/Kb2uka/openhpsdr-zeus/issues/332) · **Phase:** 0 (research + sign-off, **docs-only**) · **Branch:** `feature/332-audio-chain-phase0` · **Authority:** KB2UKA per [feedback_audio_plugin_authority](https://github.com/Kb2uka/openhpsdr-zeus) (Brian retains plugin-system architecture; audio-chain content is KB2UKA's call).
+**Issue:** [#332](https://github.com/Kb2uka/openhpsdr-zeus/issues/332) · **Phase:** 0 (research + sign-off, **docs-only**) · **Branch:** `feature/332-audio-chain-phase0` · **Authority:** KB2UKA per [feedback_audio_plugin_authority](https://github.com/Kb2uka/openhpsdr-zeus) (plugin-system architecture remains a maintainer call; audio-chain content is KB2UKA's call).
 
 This document synthesizes three Phase 0 research streams into the unified plan and the sign-off list. The full research lives in the sibling files under `docs/proposals/audio-chain/` — this PRD points at them rather than restating them.
 
@@ -28,7 +28,7 @@ Explicit non-v1 (worth surfacing to KB2UKA as "want to add these?" rather than p
 
 ### Deployment model — each block is a registry plugin
 
-Per Brian's plugin system rebuild ([PR #368](https://github.com/Kb2uka/openhpsdr-zeus/pull/368), merged to `develop` at `a5f5df4` 2026-05-17), each of the five blocks ships as a **separate Zeus-native registry plugin**, NOT as code baked into Zeus core. The blocks are managed .NET assemblies authored by Zeus contributors and distributed through `Kb2uka/openhpsdr-zeus-plugins`. They are **not VST3 plugins** and have no relationship to the Steinberg ecosystem; the operational "MaxxBass" / "Aphex 204" / "Aural Exciter" naming refers to the well-known *processing techniques* we reimplement, not to any third-party plugin product.
+Per the plugin system rebuild ([PR #368](https://github.com/Kb2uka/openhpsdr-zeus/pull/368), merged to `develop` at `a5f5df4` 2026-05-17), each of the five blocks ships as a **separate Zeus-native registry plugin**, NOT as code baked into Zeus core. The blocks are managed .NET assemblies authored by Zeus contributors and distributed through `Kb2uka/openhpsdr-zeus-plugins`. They are **not VST3 plugins** and have no relationship to the Steinberg ecosystem; the operational "MaxxBass" / "Aphex 204" / "Aural Exciter" naming refers to the well-known *processing techniques* we reimplement, not to any third-party plugin product.
 
 Each block implements:
 
@@ -90,7 +90,7 @@ A first-time operator who enables the master toggle and turns on every block sho
 
 ## 2. Sign-off questions
 
-Per [feedback_audio_plugin_authority](https://github.com/Kb2uka/openhpsdr-zeus), all algorithm / block-content / default-value questions go to **KB2UKA**. System / contracts / loader questions go to **Brian**.
+Per [feedback_audio_plugin_authority](https://github.com/Kb2uka/openhpsdr-zeus), all algorithm / block-content / default-value questions go to **KB2UKA**. System / contracts / loader questions go to the maintainer.
 
 ### KB2UKA decides
 
@@ -103,9 +103,9 @@ Per [feedback_audio_plugin_authority](https://github.com/Kb2uka/openhpsdr-zeus),
 7. **Bass-enhancer source path.** Direct C# port of Bankstown's algorithm (MIT, clean-room) vs. FFI to Bankstown as a Rust cdylib vs. independent algorithm derived from the MaxxBass paper directly? Pure C# port keeps the managed-only distribution story; FFI adds a Rust toolchain dependency we don't currently have.
 8. **Initial Phase 1 block.** Recommended: **Compressor first** — simplest algorithm (well-understood envelope-follower + gain stage), shortest path to validating the end-to-end pipeline (build → package as registry plugin → install → load → process → meter → persist params). Once the pipeline is proven on one block, the harder blocks (EQ UX, bass enhancer algorithm, reverb library choice) can be built without architecture risk.
 
-### Brian decides (system / contracts)
+### Maintainer decides (system / contracts)
 
-These came out of Brian's prompt to KB2UKA dated 2026-05-17 about the broader plugin-system restructuring. Audio-chain work flushes them out as concrete questions:
+These came out of the 2026-05-17 maintainer discussion about the broader plugin-system restructuring. Audio-chain work flushes them out as concrete questions:
 
 9. **Multi-slot conflict policy.** `AudioChain` is 8 slots serial. If two installed plugins both declare `audio.slot = "tx.pre-cfc"`, what happens today? (Last-wins? Error? User picks order?) For five blocks all targeting `tx.pre-cfc`, the chain order matters — `AudioChain`'s current implementation may need a chain-position field on the manifest, or an operator-facing reorder UI.
 10. **Native bridge distribution model.** Our v1 blocks are managed-only (assuming KB2UKA rules out verblib P/Invoke and the Bankstown Rust FFI in Q3/Q7 above). If any future plugin needs a native binary, does the binary ship inside the plugin zip per-OS, or via a separate per-OS download path? Worth establishing the policy now even though v1 doesn't trigger it.
@@ -132,8 +132,8 @@ When this PR merges, Phase 0 is closed. Phase 1 begins with KB2UKA's answers to 
 ## 4. Phase 1 entry plan (preview, NOT in scope of this PR)
 
 1. **Repo setup** for the first plugin. Either:
-   - A new repo `Kb2uka/zeus-plugin-compressor` (matches Brian's stated pattern of "one plugin = one repo")
-   - A shared monorepo `Kb2uka/zeus-audio-chain-plugins` containing all five plugins (simpler ops; needs Brian's input)
+   - A new repo `Kb2uka/zeus-plugin-compressor` (matches the stated pattern of "one plugin = one repo")
+   - A shared monorepo `Kb2uka/zeus-audio-chain-plugins` containing all five plugins (simpler ops; needs maintainer input)
 2. **Skeleton plugin** implementing `IZeusPlugin + IAudioPlugin` with a no-op `Process` (passthrough). Validates: build → package as zip per the manifest schema → SHA-256 → registry entry → install via Zeus's `POST /api/plugins/install` → AssemblyLoadContext load → tap on `AudioPluginBridge` → `Process` called → uninstall.
 3. **First real algorithm** — recommended: Compressor. Smallest correct implementation ships first.
 4. **Operator-facing UI** for the compressor via `IUiPlugin` + `IBackendPlugin` for parameter persistence.
@@ -144,8 +144,8 @@ When this PR merges, Phase 0 is closed. Phase 1 begins with KB2UKA's answers to 
 
 ## 5. Out of scope (explicit)
 
-- **VST3 third-party plugin support.** The existing VST host in Zeus core (PR #368) is queued for removal once the native chain ships — per #332's Phase 7 plan. **Brian's separate proposal** to extract the VST host as its own external plugin (so operators retain third-party VST3 capability) is NOT being adopted here — KB2UKA's plan is removal, not extraction. This is a divergence worth coordinating with Brian before VST code starts getting deleted, but it's not Phase 0 / Phase 1 work.
-- **RX-side audio plugins.** All five v1 blocks are TX-only. Brian's prompt proposes adding an `SetRxAudioPluginHandler` mirror; that work doesn't block our chain and isn't part of this proposal.
+- **VST3 third-party plugin support.** The existing VST host in Zeus core (PR #368) is queued for removal once the native chain ships — per #332's Phase 7 plan. **A separate proposal** to extract the VST host as its own external plugin (so operators retain third-party VST3 capability) is NOT being adopted here — KB2UKA's plan is removal, not extraction. This is a divergence worth coordinating with the maintainers before VST code starts getting deleted, but it's not Phase 0 / Phase 1 work.
+- **RX-side audio plugins.** All five v1 blocks are TX-only. The earlier prompt proposes adding an `SetRxAudioPluginHandler` mirror; that work doesn't block our chain and isn't part of this proposal.
 - **Block presets library.** Per-block presets ("SSB contest", "FT8 macro", "podcast voice") are queued for Phase 1.6 or Phase 2. v1 ships with sensible defaults + operator-editable parameters only.
 - **Multi-band EQ curve display.** A live spectrum-overlay EQ curve panel is a Phase 2 enhancement. v1 EQ is per-band sliders only.
 - **Operator-tunable chain CPU budget.** No "limit each block to X% CPU" knob in v1. Defaults plus operator-disable-blocks is the v1 mitigation.

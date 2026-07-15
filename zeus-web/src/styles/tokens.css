@@ -132,7 +132,7 @@
      on the immersive meters and the RF2K-S amplifier panel. The signal
      gradient (--immersive-good/warn/tx) on the active fills is unchanged
      because those colours are semantic. The lamp tones simulate a warm
-     incandescent bulb illuminating the instrument from below — Brian's
+     incandescent bulb illuminating the instrument from below — the final
      "white-grey-yellow gradient" direction (chat12 final state). All
      tokens are kept separate from the existing immersive-* palette so a
      future operator preference toggle can swap lamp colour temperature
@@ -208,7 +208,7 @@ html[data-fonts="geist"] { --font-sans: 'Inter', sans-serif; --font-mono: 'JetBr
 /* ===========================================================
    LIGHT THEME — brushed silver chassis, dark displays
    ===========================================================
-   Source: docs/designs "Zeus Lifted Dark v4" (chat1 — Brian's
+   Source: docs/designs "Zeus Lifted Dark v4" (chat1 — the
    light-theme direction: "strong silver element, not washed-out
    white"). Chassis surfaces flip to cool silver while DISPLAY
    wells (panadapter, VFO, S-meter, gauges, LED meters) stay dark

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -112,7 +112,7 @@ public class PsWireFormatTests
     public void AlexPsBit_Is_0x00040000()
     {
         // Defensive constant test — pihpsdr new_protocol.c:994-998 says
-        // ALEX_PS_BIT = 0x00040000. If we change it Brian's G2 stops
+        // ALEX_PS_BIT = 0x00040000. If we change it the reference G2 stops
         // engaging the feedback-coupler tap.
         Assert.Equal(0x00040000u, Protocol2Client.AlexPsBit);
     }

@@ -548,7 +548,7 @@ honoured from gateware 7.2 onwards (the version that introduced the
 extended LNA-gain control for HL2). This is **untested by Zeus** — the
 parent issue lists "note any gateware version requirements" as a
 deliverable; the answer is "no host-side gating found in the reference
-forks; rely on the radio's own response". Brian's HL2 should be fw ≥ 7.2;
+forks; rely on the radio's own response". The reference HL2 should be fw ≥ 7.2;
 KB2UKA does not have an HL2 to bench-test.
 
 

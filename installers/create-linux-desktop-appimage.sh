@@ -151,7 +151,7 @@ WHAT YOU GET
   server process. For a browser-based / remote-friendly install, see the
   service-mode tarball (openhpsdr-zeus-${VERSION}-linux-x64.tar.gz).
 
-More info: https://github.com/brianbruff/openhpsdr-zeus
+More info: https://github.com/Zeus-SDR/openhpsdr-zeus
 License:   GNU GPL v2 or later
 EOF
 

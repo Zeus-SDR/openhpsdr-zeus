@@ -3,7 +3,7 @@ name: KB2UKA-Agent — Issue Triage
 # Automated triage on newly-opened issues. Runs as KB2UKA-Agent (App ID
 # 3702876), distinct from kb2uka-agent.yml (which is the mention-based
 # coding bot). Replaces the previous zeus-agent.yml that ran under
-# Brian's Zeus-Agent App — that App is not installed on this repo
+# the legacy Zeus-Agent App — that App is not installed on this repo
 # post-transfer, so it was failing on every issue event.
 #
 # Secrets required (set via `gh secret set`):

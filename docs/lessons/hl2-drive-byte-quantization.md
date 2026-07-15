@@ -25,7 +25,7 @@ LiteDB state on the reference HL2 it should be reset to 100 — press
 | Stored `PaGainDb` | Old (dB model, pre-fix) | New (% model, current) |
 |---|---|---|
 | 40.5 | piHPSDR generic default → 1 W | 40.5 % output → nibble 0x6 → 40 % |
-| 26   | EI6LF calibration → 7 W       | 26 % output → nibble 0x4 → 27 %   |
+| 26   | Legacy calibration → 7 W      | 26 % output → nibble 0x4 → 27 %   |
 | 100  | (out of old clamp range)      | Full rated → nibble 0xF → 100 %   |
 | 38.8 | (unlikely before)             | 6 m soft-cap → nibble 0x6 → 40 %  |
 

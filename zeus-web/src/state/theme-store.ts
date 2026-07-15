@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF) and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA), Christian Suarez (N9WAR), and contributors.
 // See LICENSE for the full GPL text.
 
 import { create } from 'zustand';
@@ -33,7 +33,7 @@ export type ThemeId = 'dark' | 'light';
 //   - SURFACE tokens — chassis / panel / line / text. These were historically
 //     hidden because flipping one surface in isolation can break contrast
 //     (e.g. a dark --bg-0 with light --fg-0 already painted by the theme).
-//     They're exposed now because Brian asked for per-shack chassis tuning;
+//     They're exposed for per-shack chassis tuning;
 //     the panel renders them in a separate group with a warning that they
 //     can break contrast if pushed too far from the theme defaults.
 // Add a token here + a label in TOKEN_META if you want a new picker row.

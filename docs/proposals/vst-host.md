@@ -4,13 +4,13 @@
 
 Status: accepted (Phase 1 in progress)
 Branch: `VST-Experimental` (local prototype until Phase 1 SIGKILL gate passes)
-Authors: KB2UKA, with maintainer (Brian, EI6LF) reserving final authority on
+Authors: KB2UKA, with the maintainer reserving final authority on
 visual design, UX, and operator-visible defaults.
 
 ## 1. Context
 
 This ADR closes the design loop on issue #106 (VST host) and clarifies its
-relationship to #185 (Brian's broader plugin PRD). The bot's proposal under
+relationship to #185 (the broader plugin PRD). The proposal under
 #185 suggested a single in-process `AssemblyLoadContext` for all server-side
 plugins. That is correct for native .NET widget / amp plugins but wrong for
 VST: it forbids 32-bit plugin support on a 64-bit host and gives no crash
@@ -54,10 +54,10 @@ constrained by that.
 - **Persistence.** Global save-on-change, matching the NR4 model
   from #79. No explicit save button.
 - **Distribution.** Optional addon, downloaded separately, not
-  bundled with the Zeus installer. Matches Brian's #185 framing.
+  bundled with the Zeus installer. Matches the #185 framing.
 - **Repo layout.** Sidecar lives in a separate repo, working title
   `openhpsdr-zeus-plughost`. Default license proposed GPLv2+ to
-  match Zeus; flagged below for Brian's review.
+  match Zeus; flagged below for maintainer review.
 
 ## 3. IPC wire format (Phase 1)
 
@@ -101,7 +101,7 @@ thread does no other syscalls and never allocates or locks.
 - **Phase 6.** Multi-slot chain UI — multiple inserts per chain, per
   chain bypass, named presets, persisted alongside band state.
 
-## 5. Pending decisions for Brian's review
+## 5. Pending decisions for maintainer review
 
 - Sidecar repo license — default GPLv2+ to match Zeus, but a permissive
   license (MIT) would broaden reuse by other HPSDR projects. Maintainer
@@ -136,5 +136,5 @@ imposed on operators.
   local-only.
 - Audio Unit (AU) on macOS.
 - LV2 in Phase 1.
-- Plugin sandboxing / threat-model. Per Brian's framing on #185, that
+- Plugin sandboxing / threat-model. Per the framing on #185, that
   is the installer's problem.

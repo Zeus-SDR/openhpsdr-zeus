@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -183,7 +183,7 @@ public sealed class PsAutoAttenuateService : BackgroundService
     // Silent server-side auto-cal of WDSP hw_peak from observed TX envelope.
     // mi0bot exposes PSForm.cs txtPSpeak as a hand-dialed operator value
     // defaulting to clsHardwareSpecific.cs:303-328 PSDefaultPeak. We deviate
-    // per Brian (EI6LF) "I want it automatic" instruction: WDSP calcc bins
+    // per the operator requirement for automatic adjustment: WDSP calcc bins
     // env*hw_scale into 16 bins where hw_scale = 1/hw_peak; samples > hw_peak
     // are dropped; bin 15 covers env*hw_scale in 0.9375..1.0 → bin 15 fills
     // only when hw_peak < observed * 1.067. Sweet spot: hw_peak = observed *
@@ -547,7 +547,7 @@ public sealed class PsAutoAttenuateService : BackgroundService
     // *** DEVIATION FROM mi0bot ***
     // Silent server-side auto-cal of WDSP hw_peak from observed TX envelope
     // (GetPSMaxTX). mi0bot leaves hw_peak as the operator-tuned PSForm.cs
-    // txtPSpeak. Per Brian (EI6LF) "I want it automatic" instruction we
+    // txtPSpeak. Per the operator requirement for automatic adjustment we
     // retarget to observed*1.02 whenever the current hw_peak is ≥5% off,
     // throttled to ≤1 push/sec and skipped while the HL2 auto-att dance is
     // mid-flight (we don't want to fight a SetPSControl(reset=1) sequence).

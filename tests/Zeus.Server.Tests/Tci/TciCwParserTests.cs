@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF) and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA), Christian Suarez (N9WAR), and contributors.
 
 using Zeus.Server.Tci;
 
@@ -82,18 +82,18 @@ public class TciCwParserTests
     {
         // ExpertSDR3 wire convention: each part already includes its own
         // trailing spacing. Parser concatenates without injecting separators.
-        var r = TciCwParser.ParseCwMsg(new[] { "0", "CQ ", "EI6LF", " K" });
+        var r = TciCwParser.ParseCwMsg(new[] { "0", "CQ ", "W1AW", " K" });
         Assert.NotNull(r);
-        Assert.Equal("CQ EI6LF K", r!.Value.Text);
+        Assert.Equal("CQ W1AW K", r!.Value.Text);
         Assert.Equal(1, r.Value.Repeats);
     }
 
     [Fact]
     public void CwMsg_TrailingSmallInteger_IsRepeatCount()
     {
-        var r = TciCwParser.ParseCwMsg(new[] { "0", "CQ ", "EI6LF", " K", "3" });
+        var r = TciCwParser.ParseCwMsg(new[] { "0", "CQ ", "W1AW", " K", "3" });
         Assert.NotNull(r);
-        Assert.Equal("CQ EI6LF K", r!.Value.Text);
+        Assert.Equal("CQ W1AW K", r!.Value.Text);
         Assert.Equal(3, r.Value.Repeats);
     }
 

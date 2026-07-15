@@ -79,8 +79,8 @@ For external contributors (anyone without write access to this repo):
 3. **Build clean** before opening the PR — `dotnet build Zeus.slnx` must be
    0 warnings, 0 errors. Tests should pass: `dotnet test Zeus.slnx`.
 4. **Open the PR against `develop`** on `Kb2uka/openhpsdr-zeus`. Never `main`.
-5. **Wait for review.** KB2UKA reviews backend wiring and most code; @brianbruff
-   reviews UI/UX/defaults. Reviews are usually within a day, sometimes same day.
+5. **Wait for review.** KB2UKA reviews backend wiring and most code, plus
+   UI/UX/defaults. Reviews are usually within a day, sometimes same day.
 6. **Don't merge your own PR.** Reviewer merges after approval.
 
 You don't need collaborator status on this repo to contribute — the fork + PR
@@ -128,7 +128,7 @@ on, ask in the issue.
 
 - **Visual design** — colours, fonts, layout, spacing, typography. The Zeus
   aesthetic is faithful to the Hermes-Lite 2 hardware front panel and is
-  actively maintained by @brianbruff. Use existing CSS token variables in
+  actively maintained. Use existing CSS token variables in
   `zeus-web/src/styles/tokens.css`; never raw hex.
 - **UX behaviour** — what a click/drag/scroll does, keyboard shortcuts,
   panadapter/waterfall axis direction, VFO tuning feel.
@@ -232,10 +232,10 @@ any DSP, protocol, or layout code that those lessons cover.
 
 - **KB2UKA** (Doug, repo owner) reviews most code, backend wiring, build /
   CI, docs, and refactors.
-- **@brianbruff** (Brian, project founder) reviews UI/UX, visual design,
-  operator-felt defaults, architecture-level decisions.
+- **KB2UKA** also reviews UI/UX, visual design, operator-felt defaults, and
+  architecture-level decisions.
 
-Both reviewers may request changes or ask for clarifications. We try to be
+Reviewers may request changes or ask for clarifications. We try to be
 helpful in review; if a piece of feedback isn't clear, ask.
 
 Squash-vs-merge: the repo uses **merge commits** for PRs (preserves
@@ -292,7 +292,7 @@ Be kind, be specific, assume good faith. Most contributors here are doing
 this in their off hours after a day job; nobody owes anybody an instant
 response. We expect technical disagreement; we don't expect personal sharpness.
 
-Brian and Doug reserve the right to ask for changes or close PRs that don't
+The maintainers reserve the right to ask for changes or close PRs that don't
 fit the project's direction; this isn't personal, it's stewardship.
 
 ---
@@ -307,4 +307,4 @@ full text.
 
 73 and welcome aboard.
 
-— Doug (KB2UKA) and Brian (EI6LF)
+— Doug (KB2UKA)

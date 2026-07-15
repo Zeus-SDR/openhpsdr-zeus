@@ -1,6 +1,6 @@
 # perf_pass_3 — Chrome client profile (via playwright, real session)
 
-Captured 2026-05-11. Brian's Vite dev (:5173) → worktree backend (:6060,
+Captured 2026-05-11. The reference Vite dev (:5173) → worktree backend (:6060,
 perf_pass_3 / Release / Workstation GC + WaitToReadAsync iter1) → live
 HL2 (192 kHz USB, 14.200 MHz). Window: 30 s normal RX, panadapter +
 waterfall + meters rendering.

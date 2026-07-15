@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -97,7 +97,7 @@ public class TwoToneLatchTests : IDisposable
     }
 
     // ---- TrySetTwoTone — round-3 auto-MOX path (Thetis parity).
-    // Brian's expectation: pressing 2-Tone produces RF without a separate
+    // Operator expectation: pressing 2-Tone produces RF without a separate
     // MOX press. TrySetTwoTone owns the MOX state while armed and drops it
     // unconditionally on disarm (mirrors setup.cs:11162-11165, 11189-11216).
 

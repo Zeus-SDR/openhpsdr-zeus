@@ -280,7 +280,7 @@ Mic Input (48 kHz)
 
 > **Q6: Does Phase 1 wire each v1 block behind an IZeusAudioPlugin abstraction (contract), or directly into DspPipelineService?**
 >
-> **Action:** Gated on Brian's `feature/plugins-foundation` landing. Phase 1 may proceed with direct wiring; Phase 1.1 refactors behind plugin contract once available.
+> **Action:** Gated on the `feature/plugins-foundation` landing. Phase 1 may proceed with direct wiring; Phase 1.1 refactors behind plugin contract once available.
 
 ---
 

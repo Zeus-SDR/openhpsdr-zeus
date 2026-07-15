@@ -1,6 +1,6 @@
 # perf_pass_3 — measured CPU/alloc comparison
 
-Captured 2026-05-11. Same machine, same HL2 (192.168.100.21), Protocol 1 @ 192 kHz, single SignalR client (Brian's Vite proxy / browser session, re-attached after backend bounce).
+Captured 2026-05-11. Same machine, same HL2 (192.168.100.21), Protocol 1 @ 192 kHz, single SignalR client (the reference Vite proxy / browser session, re-attached after backend bounce).
 
 ## Round 1 — async-iterator + Socket.ReceiveFrom rewrites (commits 7b156a0..1db1c8d, 4dbad0e)
 
@@ -17,7 +17,7 @@ Captured 2026-05-11. Same machine, same HL2 (192.168.100.21), Protocol 1 @ 192 k
 
 ## Round 1.5 — Workstation GC (commit 3288401)
 
-ASP.NET Core defaults to Server GC (one GC thread per logical core). On Brian's 10-core host that's 10 idle GC threads, each appearing as a low-amplitude `PollGCWorker` waker every few seconds. The `dotnet-trace cpu-sampling` profile attributed ~3 % CPU to `Thread.PollGCWorker` plus a notable slice of `LowLevelLifoSemaphore.WaitForSignal` idle churn to those threads.
+ASP.NET Core defaults to Server GC (one GC thread per logical core). On the 10-core reference host that's 10 idle GC threads, each appearing as a low-amplitude `PollGCWorker` waker every few seconds. The `dotnet-trace cpu-sampling` profile attributed ~3 % CPU to `Thread.PollGCWorker` plus a notable slice of `LowLevelLifoSemaphore.WaitForSignal` idle churn to those threads.
 
 Switched to Workstation GC via `<ServerGarbageCollection>false</ServerGarbageCollection>` in `Zeus.Server.csproj`. Concurrent GC stays enabled. Pause budget is tighter per collection but Zeus's ~1.4 MB/s alloc rate keeps each pause sub-millisecond.
 
@@ -50,7 +50,7 @@ Swap to `while (await reader.WaitToReadAsync(ct)) { while (reader.TryRead(out va
 | Lock contentions /s | 4.25 | 1.85 | **−56.6 %** |
 | Gen0 collect /s | 0.15 | 0.15 | ≈ |
 
-**Brian's < 35 % CPU target is met (35.7 % vs 35.0 % stop-iterating threshold).** Lock-contention −57 % is the cleanest signal that batching is working: each TP dispatch holds `_engineLock` once and processes the queued items before releasing.
+**the < 35 % CPU target is met (35.7 % vs 35.0 % stop-iterating threshold).** Lock-contention −57 % is the cleanest signal that batching is working: each TP dispatch holds `_engineLock` once and processes the queued items before releasing.
 
 Raw artifacts:
 - `iter2/iter1-before.csv` — 60 s dotnet-counters before this commit (PID 56859).
@@ -63,7 +63,7 @@ Raw artifacts:
 
 Adaptive cadence: idle = 1 Hz, active (PS armed AND MOX/TwoTone on) = 10 Hz. Reuses the same `PeriodicTimer` via the .NET 8+ settable `Period`. Active-mode latency to detect a fresh PS-arm or MOX-on edge is at most one second — well below operator perception.
 
-**Measurement caveat:** Brian's HL2 workload was driven by UI activity during the after-capture window — CPU shot from ~0.25 s/s (quiet) to ~0.45 s/s (interactive) purely from operator behaviour between the two captures. The PsAutoAttn saving (~9 TP wake-ups/s of the 2 080/s aggregate, ~0.4 %) is below the noise floor of that workload swing. Functionally the change is correct; the operator-facing PS arm/MOX latency is unchanged.
+**Measurement caveat:** the reference HL2 workload was driven by UI activity during the after-capture window — CPU shot from ~0.25 s/s (quiet) to ~0.45 s/s (interactive) purely from operator behaviour between the two captures. The PsAutoAttn saving (~9 TP wake-ups/s of the 2 080/s aggregate, ~0.4 %) is below the noise floor of that workload swing. Functionally the change is correct; the operator-facing PS arm/MOX latency is unchanged.
 
 | Metric | Before (iter1, quiet operator window) | After (iter3, active operator window) |
 |---|---|---|
@@ -80,7 +80,7 @@ Server-side analog of the perf3 `pushFrame` gate that perf-rgl landed on the fro
 
 Gate the entire display block on `_hub.ClientCount > 0` (O(1) `ConcurrentDictionary.Count` read). Audio path below runs unconditionally — RXA must keep draining so the WDSP audio ring doesn't back up, and in-process `RxAudioAvailable` subscribers (TCI, potential future RX-side VST seam) still need frames even with no WS clients.
 
-**Connected-client measurement is identity by design.** Brian's session had a client connected the whole time, so `hasClients = true` and the gate doesn't fire. Iter4 measurement shows ≈0 delta (CPU 0.476 → 0.478, alloc 1.348 → 1.349 MB/s, TP rate unchanged) — expected, not a regression. The win materialises only when all clients disconnect (browser tab closed, mobile UI backgrounded, remote-desktop session ended).
+**Connected-client measurement is identity by design.** the reference session had a client connected the whole time, so `hasClients = true` and the gate doesn't fire. Iter4 measurement shows ≈0 delta (CPU 0.476 → 0.478, alloc 1.348 → 1.349 MB/s, TP rate unchanged) — expected, not a regression. The win materialises only when all clients disconnect (browser tab closed, mobile UI backgrounded, remote-desktop session ended).
 
 | Metric | Before (iter3, PID 63469) | After (iter4, PID 65169) | Δ |
 |---|---|---|---|
@@ -204,7 +204,7 @@ The new floor is **24.3 % live CPU** (HL2 RX-only, no client, 192 kHz). Going be
 
 - **Debug → Release** accounts for some of the CPU win on its own. We did NOT capture a Debug-vs-Debug, only Debug-before vs Release-after.
 - Mode changed (LSB 7169 → USB 14200) on the backend bounce; sample rate identical (192 kHz). Neither should affect CPU materially in RX-only steady state.
-- Client workload assumed identical (Brian's existing browser tab, SignalR auto-reconnected on the new backend). Not independently verified.
+- Client workload assumed identical (the existing reference browser tab, SignalR auto-reconnected on the new backend). Not independently verified.
 
 ## Reading
 
@@ -220,7 +220,7 @@ A `dotnet-counters` flame chart isn't usable on macOS (UNMANAGED_CODE_TIME). To 
 ## Reproduction
 
 ```bash
-# Before snapshot — Brian's live develop session, PID 13972
+# Before snapshot — the live reference develop session, PID 13972
 # (Already captured in docs/perf/artifacts/live_idle_counters.csv at 13:12)
 
 # After snapshot — perf_pass_3 Release, HL2 attached

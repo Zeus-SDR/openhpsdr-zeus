@@ -98,7 +98,7 @@ public static class ZeusHost
             tciPort = persistedTci.Port;
         }
         // PERF_PASS_3_DEBUG: force-disable TCI bind when running a second
-        // instance on the same box (Brian's main session keeps :40001).
+        // instance on the same box (the primary session keeps :40001).
         // Uncommitted local edit.
         if (Environment.GetEnvironmentVariable("ZEUS_PERF_TEST") == "1")
         {
@@ -550,7 +550,7 @@ public static class ZeusHost
         Console.WriteLine("═══════════════════════════════════════════════════════════════");
         Console.WriteLine("  Zeus — OpenHPSDR Protocol 1 / Protocol 2 Client");
         Console.WriteLine($"  Version: {version}");
-        Console.WriteLine("  Copyright (C) 2025-2026 Brian Keating (EI6LF) and contributors");
+        Console.WriteLine("  Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA), Christian Suarez (N9WAR), and contributors");
         Console.WriteLine("  Licensed under GPL-2.0-or-later");
         Console.WriteLine("═══════════════════════════════════════════════════════════════");
         Console.WriteLine();

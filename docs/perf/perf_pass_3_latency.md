@@ -34,7 +34,7 @@ exactly the BUFFER_TARGET_SECS value.**
 > target. Mid-task this branch was re-edited to 50 ms (still uncommitted)
 > with a comment citing measured `live_client_summary.json` data: audio
 > inter-arrival p99 = 44.8 ms. 50 ms is just above p99, so the re-anchor
-> still absorbs every jitter event seen on Brian's LAN, while 30 ms would
+> still absorbs every jitter event seen on the reference LAN, while 30 ms would
 > dip below the observed max (60.4 ms) and risk underruns. 50 ms is the
 > evidence-grounded value.
 
@@ -91,7 +91,7 @@ audio-client logs only the **first** broadcast after MOX-off, not every
 audio frame.
 
 > **None of these are committed.** They sit as uncommitted local edits
-> in the worktree. Brian can `git stash` them after capturing his ten
+> in the worktree. The operator can `git stash` them after capturing the ten
 > MOX cycles on the real HL2 (§6). The PERF_PASS_3_DEBUG comments in
 > each diff make them easy to identify.
 
@@ -161,7 +161,7 @@ ctx-clock precision (sub-ms). The instrumented t₄ log emits this
 
 Two extra PERF_PASS_3_DEBUG gates were added (uncommitted) so the
 synthetic engine actually pumps audio frames and a second Zeus.Server
-can boot beside Brian's regular one:
+can boot beside the regular reference one:
 
 1. `Zeus.Dsp/SyntheticDspEngine.cs:135` — `ReadAudio` returns
    `output.Length` (silence frames) when `ZEUS_PERF_TEST=1`.
@@ -222,7 +222,7 @@ from `live_client_summary.json`. 50 ms covers p99 with margin.
 | 0.100 s (pre) | 50 ms ahead | 100 ms idle floor; every MOX edge → 100 ms gap. p99=44.8 ms easily absorbed but 2.2× over-spec for LAN. | over-conservative — was the bug |
 | **0.050 s (post)** | **25 ms ahead** | **Idle floor 50 ms. p99 (44.8 ms) below 50 ms with 5 ms margin. Observed max (60.4 ms) exceeds 50 ms — could underrun once per ~50 s if a 60+ ms gap recurs. Empirically max gap was 60.4 ms over 48 s, p99 was 44.8 ms.** | **safe for healthy LAN** |
 | 0.030 s | 15 ms ahead | Idle 30 ms. p99=44.8 ms > 30 ms → underruns on every p99 frame. Predicted ~3–5 underruns/min on a normal LAN. | too tight — rejected |
-| 0.070 s | 35 ms ahead | Idle 70 ms. 1.15× observed max — every jitter event seen on Brian's LAN absorbed. Costs +20 ms TX→RX. | fallback if 50 ms underruns on the real HL2 |
+| 0.070 s | 35 ms ahead | Idle 70 ms. 1.15× observed max — every jitter event seen on the reference LAN absorbed. Costs +20 ms TX→RX. | fallback if 50 ms underruns on the real HL2 |
 
 The `audio-client` `underruns` counter is exposed via the stats listener
 (`AudioStats.underrunCount`, emitted every 500 ms). The acceptance
@@ -265,9 +265,9 @@ gain would have been a tiny window where pre-MOX audio that was already
 scheduled but not yet played leaks into the post-MOX stream. The reset
 stays.
 
-## 6. Real-HL2 validation checklist (for Brian)
+## 6. Real-HL2 validation checklist (for the maintainer)
 
-Brian runs this once against the real HL2 to confirm the synthetic-mode
+The maintainer runs this once against the real HL2 to confirm the synthetic-mode
 predictions carry over.
 
 ### 6a. Pre-flight
@@ -284,7 +284,7 @@ predictions carry over.
    ```bash
    dotnet build Zeus.slnx -c Release
    ```
-4. Stop any existing Zeus.Server first (Brian's regular session) so the
+4. Stop any existing Zeus.Server first (the regular reference session) so the
    build under test owns :6060 + the HL2. Then start the Release build:
    ```bash
    dotnet run -c Release --project Zeus.Server
@@ -386,9 +386,9 @@ The deterministic 50 ms exact match confirms BUFFER_TARGET_SECS is the
 only thing driving the re-anchor delay. No other code path adds latency
 to the MOX-off → first-audio-scheduled hop.
 
-### 7b. Live HL2 — to be filled in by Brian
+### 7b. Live HL2 — to be filled in by the maintainer
 
-Brian completes this against the real radio using the checklist in §6.
+The maintainer completes this against the real radio using the checklist in §6.
 The synthetic capture covers everything client-side; HL2 adds:
 - the t₁ HTTP RTT (negligible on LAN)
 - the t₂ − t₁ WDSP SetChannelState call (< 1 ms)

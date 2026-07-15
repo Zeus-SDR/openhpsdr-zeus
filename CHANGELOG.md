@@ -91,7 +91,7 @@ These three fixes work together. Each one is necessary; together they make the W
 
 - **Installer bundles Microsoft Visual C++ Runtime** ([#452](https://github.com/Kb2uka/openhpsdr-zeus/issues/452), [#453](https://github.com/Kb2uka/openhpsdr-zeus/pull/453)). Zeus's audio (`miniaudio.dll`) and DSP (`wdsp.dll`) libraries are built with Microsoft's C++ compiler and need the Visual C++ Runtime to load. Fresh Windows installs without Microsoft Office, Visual Studio, or another large desktop app silently miss it — and Zeus quietly falls back to a placeholder mode that produces no panadapter, no audio, and no transmit power despite MOX visibly keying the radio. The v0.8.3 installer now bundles Microsoft's `vc_redist.x64.exe` (and `vc_redist.arm64.exe` for ARM Windows) and runs it during install, skipped automatically if a compatible runtime is already present. Installer grows from ~54 MB to ~67 MB; no workaround needed for operators. Diagnosed and fixed by Doug (KB2UKA) after standing up a fresh Windows 11 VM specifically to reproduce operator complaints.
 
-- **WASAPI Pro Audio scheduling hint** ([#450](https://github.com/Kb2uka/openhpsdr-zeus/pull/450)). Tells Windows to treat Zeus's audio thread as a high-priority Pro Audio workload (via MMCSS) and to use the smallest possible WASAPI shared-mode buffer. Drops the WASAPI buffer between Zeus and the speaker from ~100-300 ms down to ~10-30 ms. No-op on macOS (CoreAudio) and Linux (ALSA/PulseAudio). Fixed by Brian (EI6LF).
+- **WASAPI Pro Audio scheduling hint** ([#450](https://github.com/Kb2uka/openhpsdr-zeus/pull/450)). Tells Windows to treat Zeus's audio thread as a high-priority Pro Audio workload (via MMCSS) and to use the smallest possible WASAPI shared-mode buffer. Drops the WASAPI buffer between Zeus and the speaker from ~100-300 ms down to ~10-30 ms. No-op on macOS (CoreAudio) and Linux (ALSA/PulseAudio).
 
 - **MOX-coupled RX audio ring drain** ([#403](https://github.com/Kb2uka/openhpsdr-zeus/issues/403), [#454](https://github.com/Kb2uka/openhpsdr-zeus/pull/454)). On Windows, the radio's sample clock and the soundcard's clock drift relative to each other (the radio runs slightly faster than most Windows audio devices). Zeus's RX audio buffer accumulates this drift as a growing backlog over a multi-minute session — after 10+ minutes the buffer holds ~1.3 seconds of audio. Pressing MOX or TUNE used to produce 2-3 seconds of stale audio before silence reached the operator's ear. v0.8.3 drains the audio buffer the instant TX engages, so the MOX-engage transition stays snappy regardless of session age. macOS and Linux operators see no change — their audio backends barely drift, so the drain runs on an already-empty buffer. Diagnosed by Doug (KB2UKA) from the reproduction VM; root cause confirmed via the desktop-vs-browser asymmetry that Ronnie (@RonnieC82) spotted in his original report (#403).
 
@@ -103,7 +103,7 @@ These three fixes work together. Each one is necessary; together they make the W
 
 - **HermesC10 / ANAN-G2E receive now works** ([#425](https://github.com/Kb2uka/openhpsdr-zeus/issues/425), [#440](https://github.com/Kb2uka/openhpsdr-zeus/pull/440)). Discovered when Stig (@lb5va) tried Zeus with his G2E for the first time and got connect-but-no-RX. Root cause: an earlier PR mis-mapped the G2E's RX path to DDC2; the N1GP G2E firmware is single-ADC Hermes-class and uses DDC0. Fix routes the RX correctly. Stig bench-confirmed the fix before merge. Thanks Stig.
 
-- **PureSignal stall banner direction corrected and usage documented** ([#438](https://github.com/Kb2uka/openhpsdr-zeus/pull/438)). The "PS stalled" banner pointed the wrong way after a stall. Brian fixed the direction and added an operator-facing usage doc on PS setup. Plus follow-up messaging refinements ([#451](https://github.com/Kb2uka/openhpsdr-zeus/pull/451)).
+- **PureSignal stall banner direction corrected and usage documented** ([#438](https://github.com/Kb2uka/openhpsdr-zeus/pull/438)). The "PS stalled" banner pointed the wrong way after a stall. The direction was fixed and an operator-facing usage doc on PS setup added. Plus follow-up messaging refinements ([#451](https://github.com/Kb2uka/openhpsdr-zeus/pull/451)).
 
 - **RX trace colour now persists across restarts** ([#437](https://github.com/Kb2uka/openhpsdr-zeus/pull/437)). Operators who changed the panadapter trace colour saw it reset to default on every backend restart. Now persisted server-side alongside the rest of the display settings.
 
@@ -113,9 +113,9 @@ These three fixes work together. Each one is necessary; together they make the W
 
 ### Developer / infra
 
-- **Nightly builds** ([#433](https://github.com/Kb2uka/openhpsdr-zeus/pull/433)). A rolling pre-release nightly installer is now published every night from the latest `develop` code at https://github.com/Kb2uka/openhpsdr-zeus/releases/tag/nightly. Useful for testers and operators who want the newest fixes between tagged releases. The "Latest" badge stays on the most recent tagged release (this one). Fixed by Brian (EI6LF).
+- **Nightly builds** ([#433](https://github.com/Kb2uka/openhpsdr-zeus/pull/433)). A rolling pre-release nightly installer is now published every night from the latest `develop` code at https://github.com/Kb2uka/openhpsdr-zeus/releases/tag/nightly. Useful for testers and operators who want the newest fixes between tagged releases. The "Latest" badge stays on the most recent tagged release (this one).
 
-- **`miniaudio.dll` committed to the repository for fresh Windows clones** ([#448](https://github.com/Kb2uka/openhpsdr-zeus/pull/448)). Mirrors the existing `wdsp.dll` arrangement so a developer who clones the repository and runs `dotnet run --project OpenhpsdrZeus -- --desktop` on Windows gets working audio without a manual build step. Doesn't affect installed-app behaviour (the release pipeline always rebuilds the natives from source). Fixed by Brian (EI6LF).
+- **`miniaudio.dll` committed to the repository for fresh Windows clones** ([#448](https://github.com/Kb2uka/openhpsdr-zeus/pull/448)). Mirrors the existing `wdsp.dll` arrangement so a developer who clones the repository and runs `dotnet run --project OpenhpsdrZeus -- --desktop` on Windows gets working audio without a manual build step. Doesn't affect installed-app behaviour (the release pipeline always rebuilds the natives from source).
 
 ### What's still next for Windows
 
@@ -125,7 +125,7 @@ We're also keeping an eye on operator reports for any remaining Windows-only qui
 
 ### Thanks
 
-- **Brian (EI6LF)** — WASAPI Pro Audio fix (#450), nightly-builds infrastructure (#433), `miniaudio.dll` clone-and-run fix (#448), PS stall direction + usage doc (#438), PS messaging refinements (#451)
+- **Additional work** — WASAPI Pro Audio fix (#450), nightly-builds infrastructure (#433), `miniaudio.dll` clone-and-run fix (#448), PS stall direction + usage doc (#438), PS messaging refinements (#451)
 - **Doug (KB2UKA)** — Windows responsiveness diagnostic from a reproduction VM, VC++ Runtime bundle (#453), MOX-coupled ring drain (#454), Audio Suite master bypass (#449), HermesC10 / ANAN-G2E RX fix (#440), RX trace colour persistence (#437)
 - **Ramón (EA5IUE)** — PS scaffolding cleanup (#436)
 - **Stig (LB5VA)** — bench-testing the G2E receive fix on his own radio before merge (#425)
@@ -159,7 +159,7 @@ We're also keeping an eye on operator reports for any remaining Windows-only qui
 
 ### Fixed
 
-- **Windows: OpenhpsdrZeus.exe no longer lingers in Task Manager after closing the desktop window** (#400, **@brianbruff**). v0.8.0 registered an `AppDomain.CurrentDomain.ProcessExit` handler in both `--desktop` and `--server` modes that called `window.Close()`. That event fires *during* exit, after `Main` returned and Photino's native state was being torn down — the handler then re-entered a half-disposed WebView2/COM apartment on the `[STAThread]` main thread, deadlocking for ~30 s. v0.8.1 deletes the handler in two lines: `Console.CancelKeyPress` already handled Ctrl-C translation; `ProcessExit` was never the right hook for shutdown.
+- **Windows: OpenhpsdrZeus.exe no longer lingers in Task Manager after closing the desktop window** (#400). v0.8.0 registered an `AppDomain.CurrentDomain.ProcessExit` handler in both `--desktop` and `--server` modes that called `window.Close()`. That event fires *during* exit, after `Main` returned and Photino's native state was being torn down — the handler then re-entered a half-disposed WebView2/COM apartment on the `[STAThread]` main thread, deadlocking for ~30 s. v0.8.1 deletes the handler in two lines: `Console.CancelKeyPress` already handled Ctrl-C translation; `ProcessExit` was never the right hook for shutdown.
 
   Bench-verified on Windows 11: process exits in ~2.2 s after window close (down from >30 s of hang). Subsequent relaunches no longer pile up orphan processes.
 
@@ -187,17 +187,17 @@ We're also keeping an eye on operator reports for any remaining Windows-only qui
 ### Added — installers
 
 - **Dual desktop icons on every platform** (#392). Windows / macOS / Linux all ship a **Zeus** icon (full Photino window, `--desktop`) and a **Zeus Server** icon (backend + small Photino status window listing the LAN URLs with a Stop Zeus button, new `--server` flag). Headless service mode (`OpenhpsdrZeus` with no flag) is byte-identical to before — systemd, Docker, and Raspberry Pi deploys unaffected.
-- **Single-binary OpenhpsdrZeus** (#352, **@brianbruff**). Multi-phase rollup that collapsed Zeus.Server + Zeus.Desktop into one executable hosting both modes, vendored miniaudio for native RX sink + TX mic capture without a browser tab, and shipped the desktop-mode audio opt-out path.
-- **Desktop session share over LAN HTTPS** (#363, **@brianbruff**). A phone or laptop on the same network can pick up the desktop session while the operator is away from the shack PC.
+- **Single-binary OpenhpsdrZeus** (#352). Multi-phase rollup that collapsed Zeus.Server + Zeus.Desktop into one executable hosting both modes, vendored miniaudio for native RX sink + TX mic capture without a browser tab, and shipped the desktop-mode audio opt-out path.
+- **Desktop session share over LAN HTTPS** (#363). A phone or laptop on the same network can pick up the desktop session while the operator is away from the shack PC.
 - **Always rebuild SPA before Publish** (#365, fixes #350).
 
-### Added — plugin system foundation (**@brianbruff**)
+### Added — plugin system foundation
 
 - **Unified plugin system rebuilt from contracts down** (#368). `Zeus.Plugins.Contracts` with `IBackendPlugin` / `IUiPlugin` / `IAudioPlugin`, in-process VST3 via vendored vst3sdk, `AudioPluginBridge` on the WDSP TX seam, browsable registry pointing at the new plugins repo.
 - **Frontend plugin runtime** (#370) + plugin-panel-tile persistence across layout reparse (#375).
 - **RF2K-S amp extracted to a plugin** (#374) — refactor; behaviour unchanged.
 
-### Added — rotator + mobile + meters (**@brianbruff**)
+### Added — rotator + mobile + meters
 
 - **Rotator Dial panel** (#385) — pure compass.
 - **Rotator: persist rotctld config server-side; trust backend status** (#388).
@@ -210,7 +210,7 @@ We're also keeping an eye on operator reports for any remaining Windows-only qui
 
 - **Smoothed-SWR + per-mode trip thresholds** (#367). Smoothed ADC drives the SWR axis (peak-hold stays for watts); MOX 2.5:1 / 300 ms grace; TUN 6:1 / 500 ms grace.
 
-### Fixed — PureSignal HL2 (**@brianbruff**)
+### Fixed — PureSignal HL2
 
 - **Match mi0bot exactly** (#380) — `hw_peak 0.233` and no dance cooldown. Aligns the HL2 PureSignal path with the canonical mi0bot openhpsdr-thetis fork.
 
@@ -230,7 +230,7 @@ We're also keeping an eye on operator reports for any remaining Windows-only qui
 
 ### Contributors
 
-Huge thanks to **@brianbruff (EI6LF)** for the plugin-system rebuild, the single-binary rollup, LAN-share-over-HTTPS, rotator + mobile + light-theme polish, and the HL2 PureSignal mi0bot alignment. To **@rampa069 (Ramon Martinez)** for the smoothed-SWR fix that ratified the no-G2-bench-access regression-risk case, and for the docs path cleanup as a 3rd-contribution regular. The Audio Suite plugin work, installer dual-icons, and persistence fixes are KB2UKA's.
+Thanks to **@rampa069 (Ramon Martinez)** for the smoothed-SWR fix that ratified the no-G2-bench-access regression-risk case, and for the docs path cleanup as a 3rd-contribution regular. The Audio Suite plugin work, installer dual-icons, and persistence fixes are KB2UKA's.
 
 ---
 
@@ -285,12 +285,12 @@ thanks for the careful, well-tested patches.
   - Fix: `RadioService.ConnectAsync` calls `client.SetBoardKind(discoveredKind)` after handshake (mirrors the Protocol-2 pattern), `/api/connect` plumbs `boardId` through, and the frontend P1 connect path passes the discovered board byte. Connect logs now show `board=Hermes` (or HermesII, etc.) instead of HermesLite2, and PA / drive profiles route to the correct table.
   - Backwards-compatible: an older client that sends no `boardId` keeps the previous Unknown behaviour, so manual-connect flows still work.
 
-- **Hermes / HermesII / Metis: drive slider now sweeps full power.** *(Brian Keating / EI6LF, PR #338)*
+- **Hermes / HermesII / Metis: drive slider now sweeps full power.** *(PR #338)*
   - `PaMaxPowerWatts` was seeded at `10` on Hermes, HermesII, and Metis, but the `HermesGains` PA-gain bracket they share (38.8 dB on 10 m) was calibrated against a **100 W target** in Thetis. Zeus's drive slider is "percent of `MaxPowerWatts`", so at 100 % it only ever asked the DAC for ~32 % of full amplitude. A 10 W Brick2 made roughly **1 W at max TUN**.
   - Fix: bump `MaxPowerWatts` to `100` for those three boards so byte=255 is reachable at slider=100. Physical 10 W radios self-clamp to their rated max as in Thetis. Operators on Hermes-class radios will feel this immediately — the slider is no longer secretly running at one-tenth amplitude. New `docs/lessons/hermes-pa-maxwatts.md` explains the math so future board seeding doesn't repeat the mistake. HL2, ANAN-100/100B/100D/200D, G2 / G2-1K / 8000DLE, and ANAN-G2E are unaffected (already correct).
   - Together with PR #324, this is what makes ANAN-10E and other Hermes-class P1 boards a first-class Zeus radio. `RonnieC82` bench-verified earlier in the cycle.
 
-- **HL2 PureSignal stops breaking up out-of-the-box.** *(Brian Keating / EI6LF + KB2UKA, PR #341)*
+- **HL2 PureSignal stops breaking up out-of-the-box.** *(KB2UKA, PR #341)*
   - Two compounding bugs in HL2 PS calibration. (1) The shipped `hw_peak` default (`0.233`, blanket-inherited from mi0bot) was too high for typical drive — the bench-measured DDC3(tx) envelope at standard 2-tone is ≈ 0.190, so the calcc bin never filled, COLLECT never advanced, and PS sat silently armed-but-dead. (2) Once `hw_peak` was corrected, the legacy `128 / 181` dead-band combined with a full `ddB` attenuation step caused the auto-attenuate dance to oscillate forever, disabling PS every ~300 ms via `SetPsControl(reset=1)` — heard on-air as a once-per-second IMD3 bloom.
   - Fixes (every deviation from mi0bot annotated in-code with the bench measurement that justified it):
     - `hw_peak` default `0.233 → 0.2500` on HL2 (P1 and P2 paths).
@@ -331,19 +331,19 @@ thanks for the careful, well-tested patches.
   - New endpoints `GET / POST /api/radio/frequency-calibration{,/calibrate,/reset}`. No Zeus.Contracts DTO change. 23 new tests, all green.
   - Out of scope for v0.7.4 (called out in #325): automatic reference-frequency selection (5 / 10 / 15 / 20 MHz WWV/WWVH), external 10 MHz reference, per-band cal tables, XVTR offsets.
 
-- **Rotator Compass panel + one-click SP / LP slew from QRZ Lookup.** *(Brian Keating / EI6LF, PR #331)*
+- **Rotator Compass panel + one-click SP / LP slew from QRZ Lookup.** *(PR #331)*
   - New full-bleed Esri satellite Leaflet map (category: Tools) showing operator QRZ home + lookup target, great-circle arc, and the live beam-wedge overlay. Right-rail column carries a `DIST` badge, side-by-side `SP NNN°` / `LP NNN°` buttons, a numeric `HDG` input + `GO`, and `STOP`. A `NOW NNN° → tgt` chip at top-left tracks live rotator status. Right-click any marker for "Rotate to NNN°".
   - **Inline `SP` / `LP` buttons in the QRZ Lookup footer** when `rotctld` is connected and both home + contact have lat/lon — one-click slew is reachable straight from the lookup card alongside Clear / Log QSO. Row collapses gracefully when rotctld is disabled.
   - New shared brass-instrument-plate button family (`.rc-btn` + `--path` / `--go` / `--stop` / `--neutral`) — gold-on-black for primary rotate actions, white-on-black for supporting Clear / Log QSO, all on the same near-black plate as the panel header rail.
 
-- **Brushed-silver Light theme + operator-tweakable colour palette.** *(Brian Keating / EI6LF, PR #340)*
+- **Brushed-silver Light theme + operator-tweakable colour palette.** *(PR #340)*
   - Opt-in **Light** theme alongside the existing v3 Lifted Dark chrome (which is preserved byte-for-byte as the default). Chassis surfaces reskin to a silver palette taken verbatim from the Zeus Lifted Dark v4 reference; **display wells (panadapter, VFO, S-meter, gauges, LED meters) deliberately stay dark** in light mode so they still read as lit instruments embedded in a silver front panel — the classic transceiver look.
   - **Operator-facing colour palette tweaker** in Settings → DISPLAY: native colour pickers for Accent / TX / Power / Amber / Cyan / OK · Green / Orange, with per-row Reset and a global Reset-all. Overrides persist in localStorage (`zeus.theme.overrides`) and apply across both themes; defaults match `tokens.css` verbatim so this surface is opt-in only.
   - Seeds `data-theme` on `<html>` before React mounts, so a saved light preference paints immediately on reload with no flash of dark chrome.
 
 ### Known issues
 
-- The maintainer's bench tests for PR #341 covered 2-tone source and rode every code path. Voice-source / HL2-variant-other-than-EI6LF's coverage is the v0.7.5 ask — if your HL2 dances or stalls differently, please file an issue with a 10–15 s `SetPsControl` log.
+- The maintainer's bench tests for PR #341 covered 2-tone source and rode every code path. Voice-source / other-HL2-variant coverage is the v0.7.5 ask — if your HL2 dances or stalls differently, please file an issue with a 10–15 s `SetPsControl` log.
 - Frequency calibration's auto-cal hard-codes 10 MHz as the reference. Operators on the wrong side of the planet (no propagation to WWV / WWVH) currently get a `NoSignal` result and the persisted factor is left unchanged. Multi-reference + external 10 MHz support is queued for a future release per #325.
 
 ### A teaser for what's next
@@ -377,18 +377,18 @@ edge click on RX audio is gone**.
 
 ### Added
 
-- **HL2 Band Volts PWM toggle** (RADIO settings tab). *(Brian Keating / EI6LF, PR #314, closes #279)*
+- **HL2 Band Volts PWM toggle** (RADIO settings tab). *(PR #314, closes #279)*
   - Lets HL2 operators enable the firmware's Band Volts feature so an external amplifier (e.g. Xiegu XPA125B) follows Zeus's band changes automatically. Wire bit is C3 bit 3 of the Config frame (address `0x00` bit 11, "Fan or Band Volts PWM" per `docs/references/protocol-1/hermes-lite2-protocol.md` line 39).
   - Renames the legacy `EnableHl2Dither` flag to `EnableHl2BandVolts` so the in-code name matches the wire-doc terminology. mi0bot's HL2 fork uses the same one-bit repurpose. Wire encoding in `ControlFrame.WriteConfigPayload` unchanged.
   - Persists per-radio in `PreferredRadioStore` (LiteDB). Older rows hydrate as `false` — matches HL2 firmware default where the PWM line drives Fan Control unless explicitly switched.
   - New `HasHl2OptionalToggles` capability flag, true only for `HpsdrBoardKind.HermesLite2`. Frontend gates the new RADIO tab on this — invisible on non-HL2 boards. Square SDR discovers as HL2-compatible and gets the tab on the same path.
   - New endpoints `GET /api/radio/hl2-options` and `PUT /api/radio/hl2-options` returning `{ "bandVolts": bool }`. Object-shaped so future mi0bot HL2-specific toggles (e.g. "Disable PS Sync") slot in without breaking the contract.
 
-- **Meter smoothing + peak hold across every meter.** *(Brian Keating / EI6LF, PR #328)*
+- **Meter smoothing + peak hold across every meter.** *(PR #328)*
   - Raw meter frames land at ~10 Hz; the render loop ticks at ~30 Hz, so needles and bars visibly stepped between frames. New shared `useEmaSmoothed(value, tauMs)` hook applies `alpha = 1 - exp(-dt/tau)` (90 ms time constant) to every BigArc / VuColumn / PullDownArc / HBarMeter via `MeterRenderer`, and to the MIC / ALC / PWR / SWR meters inside `TxStageMeters`. Sentinels (≤ -200 dBFS) pass through verbatim so "no signal" still reads correctly.
   - Peak-hold ballistics across both renderer paths bumped to **1500 ms** before decay so SSB / FT8 transients are visible long enough to read. Absolute-peak refs still consume the raw store value, so true peaks are never shaved off by the smoother.
 
-- **NR1 / NR2 / NR4 accordion disclosure state persists across browser reloads.** *(Brian Keating / EI6LF, PR #328)*
+- **NR1 / NR2 / NR4 accordion disclosure state persists across browser reloads.** *(PR #328)*
   - The inline NR settings section was using a non-persisted Zustand store, so its chevron collapsed every page reload even if the operator preferred it open. New `nr_ui_prefs` LiteDB collection in `zeus-prefs.db` holds three booleans (one per NR engine), surfaced via `GET` / `PUT /api/nr-ui-prefs` with a 150 ms debounced write on toggle. Module-level hydration runs once on first mount; failure is best-effort (does not block UI).
 
 - **QRZ Lookup: Clear button.** *(KB2UKA, PR #320, closes #318, requested by EI8KV)*
@@ -396,7 +396,7 @@ edge click on RX audio is gone**.
 
 ### Changed
 
-- **v3 Lifted Dark theme.** *(Brian Keating / EI6LF, PR #327)*
+- **v3 Lifted Dark theme.** *(PR #327)*
   - Palette in `tokens.css` remapped to a neutral near-black (`--bg-0..3`, `--bg-inset`, `--bg-meter`); type stack swapped to **Inter** for UI and **JetBrains Mono** for fixed-width. Sidebar, topbar, transport, and panel chrome flatten — no more beveled gradients or inset highlights.
   - **VFO `freq-display` blue aurora**: three layered radial-gradients + a blurred ellipse behind 200-weight Inter digits, so the tuned frequency reads at a glance with the chrome stepping out of the way.
   - **TX stage-meter wells**: warm amber halo via `box-shadow`; analog gauges bake in the "streetlamp pool" `hsla(31, 30%, 65%, 0.19)` gradient.
@@ -405,10 +405,10 @@ edge click on RX audio is gone**.
   - **NR2 advanced settings card** lifts to `--bg-2` so it visibly sits above the DSP panel base.
   - **Sidebar gear button**: dropped the redundant "Settings" caption — the cog glyph is self-evident.
 
-- **QRZ Lookup panel: portrait rework.** *(Brian Keating / EI6LF, PR #328)*
+- **QRZ Lookup panel: portrait rework.** *(PR #328)*
   - 2× operator portrait moves to the right side, anchored at the top of the card and stretching the full height of the info column. Drops the rig / antenna / power / qsl rows that were rarely consulted in-shack. Remaining four rows (Grid / Lat-Lon / CQ · ITU / Local) stack single-column with values aligned next to their labels.
 
-- **S-Meter config: collapsed to a single "Zeus mode" toggle.** *(Brian Keating / EI6LF, PR #328)*
+- **S-Meter config: collapsed to a single "Zeus mode" toggle.** *(PR #328)*
   - The header gear previously exposed 8+ controls (scales shown, dBm readout, SWR alarm, attack / decay / averaging / peak hold) the typical operator never touched. Strips the UI to just Zeus mode — image fade past S9, lightning crackle at S9+20. Underlying store + defaults untouched, so persisted state from older sessions still hydrates cleanly.
 
 ### Known issues
@@ -430,16 +430,16 @@ also gets Protocol-2 support for the first time.
   - Fix: raised `BUFFER_TARGET_SECS` from 100 ms → 300 ms and opened the `AudioContext` with `latencyHint: 'playback'` so the browser allocates larger internal render-thread buffers. Adds ~200 ms of imperceptible RX latency in exchange for eliminating the audible clicks.
   - Diagnostic probes left in place as living instrumentation — zero overhead when there are no drops, immediately diagnostic if anything regresses.
 
-- **ANAN-G2E panadapter now works on Protocol-2.** *(Brian Keating / EI6LF, PR #308, closes #289)*
+- **ANAN-G2E panadapter now works on Protocol-2.** *(PR #308, closes #289)*
   - Root cause: Zeus hard-coded the user-RX DDC slot as DDC2 for every Protocol-2 board, but the Hermes-family firmware (which includes HermesC10 / G2E) routes user RX through DDC0. The radio was being told to enable a DDC slot it didn't use, so it never sent any RX IQ.
   - Fix: per-board `RxBaseDdc` capability — Hermes / HermesII / HermesC10 → DDC0; Saturn-class (G2 / G2-1K / 7000DLE / 8000DLE / OrionMkII) keep DDC2 (unchanged).
   - Discovered board kind is now plumbed through `/api/connect/p2` → `ConnectP2Async` → `Protocol2Client` so per-board routing applies on the first frame.
   - PS feedback block is now no-op'd for single-ADC Hermes-class boards (G2E has no PS hardware).
 
-- **ANAN-10E panadapter now works on Protocol-2.** *(Brian Keating / EI6LF, PR #308)*
+- **ANAN-10E panadapter now works on Protocol-2.** *(PR #308)*
   - Same root cause and fix as G2E above — ANAN-10E maps to HermesII (wire byte `0x02`), also a single-ADC Hermes-class board.
 
-- **Brick2 SDR works on Protocol-2.** *(Brian Keating / EI6LF, PR #308, closes #171)*
+- **Brick2 SDR works on Protocol-2.** *(PR #308, closes #171)*
   - Same DDC0 routing fix as above, plus a Brick2-specific 48 kHz IQ gain correction (`+29 dB` lift) for the deskhpsdr firmware quirk per `new_protocol.c:2516`, and macOS UDP route priming for the receive bind.
 
 - **Protocol-2 TUNE PTT-bit wire fix.** *(KB2UKA, PR #303)*
@@ -452,7 +452,7 @@ also gets Protocol-2 support for the first time.
 
 ### Changed
 
-- **Repo URL canonical updated** from `brianbruff/openhpsdr-zeus` to `Kb2uka/openhpsdr-zeus` across all 11 hardcoded references — README, AboutPanel update-check, CHANGELOG, ATTRIBUTIONS, install docs, release workflow, issue template, CLAUDE.md. *(KB2UKA, PR #309)*. GitHub's auto-redirect handles old links, but the canonical home is now correct everywhere.
+- **Repo URL canonical updated** to `Kb2uka/openhpsdr-zeus` across all 11 hardcoded references — README, AboutPanel update-check, CHANGELOG, ATTRIBUTIONS, install docs, release workflow, issue template, CLAUDE.md. *(KB2UKA, PR #309)*. GitHub's auto-redirect handles old links, but the canonical home is now correct everywhere.
 
 ### Known issues
 - None new at release. CW-only feature requests (Zero Beat, APF — #300) are in flight for a future release.
@@ -463,7 +463,7 @@ also gets Protocol-2 support for the first time.
 
 Focused release around **PureSignal correctness** and **server-side performance**.
 If you've been seeing slow PS convergence, sporadic on-air splatter bursts, or
-audio hiccups during PS correcting, this release fixes all three. Brian's
+audio hiccups during PS correcting, this release fixes all three. The
 five-iteration performance pass also lands here, taking ~25% off steady-state
 CPU.
 
@@ -494,18 +494,18 @@ distinct root causes were identified and fixed:
   mi0bot / Thetis don't auto-cal `hw_peak`; it's operator-tuned only. Restoring
   that behaviour fixes the bin starvation. The Settings panel still surfaces
   `Observed peak` if you want to dial it manually.
-  *(Brian Keating — EI6LF — PR #292)*
+  *(PR #292)*
 
 **Who this affects:** every Protocol-2 board (ANAN-G2, G2-1K, 7000DLE, 8000DLE,
 OrionMkII, ANVELINA-PRO3, RedPitaya, HermesC10/G2E). HL2's existing PS path is
 untouched.
 
-### Performance — Brian's iter1–5 server-side pass (PR #295)
+### Performance — iter1–5 server-side pass (PR #295)
 
 Five iterations of measurement-driven server-side performance work landed:
 
 - **Live CPU under steady RX: ~32.8% → ~24.3%** (iter5 head-to-head measurement
-  on Brian's bench).
+  on the reference bench).
 - **Workstation GC** for the desktop-radio workload — eliminates long Gen2
   pauses that were the dominant cause of audio hiccups during PS correcting.
 - **Async-iterators removed** from the PS-feedback pump, IQ pump, hub send
@@ -521,7 +521,6 @@ Five iterations of measurement-driven server-side performance work landed:
 - Full iter1–5 writeups, before/after counters, and sample profiles under
   `docs/perf/server/`.
 
-*(Brian Keating — EI6LF)*
 
 ### Added — Settings persistence (PR #291, closes #287)
 

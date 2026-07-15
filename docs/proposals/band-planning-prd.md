@@ -1,6 +1,6 @@
 # PRD — Regional band planning
 
-**Status:** Draft (2026-04-23) — Brian Keating (EI6LF), via team-lead.
+**Status:** Draft (2026-04-23) — via team-lead.
 **Related:** `docs/proposals/filter-visualization-prd.md` (consumes the `inBand(freqHz, mode)`
 predicate this PRD exposes).
 **Research:** `docs/proposals/research/thetis-bandplan.md`.

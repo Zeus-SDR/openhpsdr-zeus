@@ -100,7 +100,7 @@ In desktop mode the existing fragility gets tripped often enough to be visible. 
 
 ## 7. What would actually need to change (directions, not commitments)
 
-None of these are PR-ready. All of them are at minimum architecture-level and need Brian's sign-off. Listed roughly in order of likely impact:
+None of these are PR-ready. All of them are at minimum architecture-level and need maintainer sign-off. Listed roughly in order of likely impact:
 
 1. **Eliminate steady-state allocation on the PS feedback path.** Pool `float[1024]` buffers in `Protocol1Client` / `Protocol2Client` and accept `Span<float>` (or pooled arrays + a return contract) all the way through to `psccF`. Drop the `ToArray()` in `WdspDspEngine.FeedPsFeedbackBlock`. This is the change that matches Thetis's "zero allocation in steady state" most directly.
 

@@ -5,7 +5,7 @@ Authors: KB2UKA
 Date: 2026-05-17
 Companion: [01-rfc.md](./01-rfc.md), [02-block-catalog.md](./02-block-catalog.md)
 
-This document proposes how the v1 audio processing chain (5 blocks: EQ, Compressor, Exciter, Bass Enhancer, Reverb) slots into Zeus's existing UI vocabulary and integrates with the WDSP DSP engine. It makes no architectural commitments — all visual and wire-level choices are flagged for Brian (EI6LF) sign-off.
+This document proposes how the v1 audio processing chain (5 blocks: EQ, Compressor, Exciter, Bass Enhancer, Reverb) slots into Zeus's existing UI vocabulary and integrates with the WDSP DSP engine. It makes no architectural commitments — all visual and wire-level choices are flagged for maintainer sign-off.
 
 ---
 
@@ -456,21 +456,21 @@ If in-field telemetry later shows sustained > 80% single-core usage, blocks can 
 
 ## 6. Open Questions for Maintainer Sign-off
 
-> **Open question for sign-off:** Should the audio-chain panel be **collapsible (accordion) within TxAudioToolsPanel**, or a **separate scrollable section** below CFC? The current proposal assumes separate section (better mobile responsiveness, less nesting). If Brian prefers accordion (fewer visual sections), I can revise the layout sketch accordingly.
+> **Open question for sign-off:** Should the audio-chain panel be **collapsible (accordion) within TxAudioToolsPanel**, or a **separate scrollable section** below CFC? The current proposal assumes separate section (better mobile responsiveness, less nesting). If the maintainer prefers accordion (fewer visual sections), I can revise the layout sketch accordingly.
 
 > **Open question for sign-off:** The flow visualization (line diagram of 5 blocks with on/off indicators) is a novel UI pattern in Zeus. Is this the right level of abstraction? Alternative: hide the flow diagram by default and only show it on hover (less visual clutter, more detail on demand). Or: replace it with a simple "X blocks active" counter badge?
 
 > **Open question for sign-off:** Should the **Parametric EQ expose a graphical curve display** (all 10 band filters overlaid on a dB-vs-Hz graph)? This would be Phase 1 or Phase 2 work. For v1, the operator adjusts by ear (slider per band, no visualization). Recommend deferring the curve to Phase 1 or Phase 2 based on operator feedback.
 
-> **Open question for sign-off:** Per-band **Q factor (quality) in the EQ** — should operators edit it (current proposal), or should it be fixed per band for simplicity? Recommend allowing operator tuning (more flexibility, matches modern EQ UX), but confirm with Brian.
+> **Open question for sign-off:** Per-band **Q factor (quality) in the EQ** — should operators edit it (current proposal), or should it be fixed per band for simplicity? Recommend allowing operator tuning (more flexibility, matches modern EQ UX), but confirm with the maintainer.
 
 > **Open question for sign-off:** The v1 block order: **EQ → Comp → Exciter → Bass → Reverb.** Should any blocks be reordered? For example, some engineers prefer Reverb before Compressor (so the compressor doesn't "hear" the reverb tail). Is the proposed order sensible for voice TX?
 
-> **Open question for sign-off:** Preset persistence: should presets be **per-band** (one set of presets shared across all bands, applied to whatever is selected) or **per-band-stashed** (band A has "SSB contesting", band B has "FT8 macro", each band remembers its own preset)? Current proposal is per-band-stashed (more flexible). Confirm with Brian.
+> **Open question for sign-off:** Preset persistence: should presets be **per-band** (one set of presets shared across all bands, applied to whatever is selected) or **per-band-stashed** (band A has "SSB contesting", band B has "FT8 macro", each band remembers its own preset)? Current proposal is per-band-stashed (more flexible). Confirm with the maintainer.
 
 > **Open question for sign-off:** The bass enhancer is conceptually hard to understand (Aphex 204 / MaxxBass). Should we add a brief tooltip or blurb explaining what it does (e.g. "Synthesizes low-frequency harmonics for perceived bass without transmitting extreme lows")? Or keep the UI minimal (2 controls, 1 indicator) and rely on presets to demonstrate the effect?
 
-> **Open question for sign-off:** UI color for the exciter / bass enhancer activity indicators — should they use `--ok` (green, "effect is active") or something more neutral? The red `--tx` is wrong (that's "transmitting", not "activity"). Current proposal: `--ok` green when active, `--fg-4` dark gray when idle. Confirm with Brian.
+> **Open question for sign-off:** UI color for the exciter / bass enhancer activity indicators — should they use `--ok` (green, "effect is active") or something more neutral? The red `--tx` is wrong (that's "transmitting", not "activity"). Current proposal: `--ok` green when active, `--fg-4` dark gray when idle. Confirm with the maintainer.
 
 ---
 
@@ -494,5 +494,5 @@ The v1 audio voice chain (5 blocks: Parametric EQ, Compressor, Exciter, Bass Enh
 
 The integration point in `WdspDspEngine.ProcessTxBlock` is between the VST host seam and the WDSP `fexchange2` call. The chain processes a single 48 kHz mono float buffer in-place, respecting the same buffer ownership and thread-safety constraints as the existing VST host. Per-block CPU budget totals ~16–22% per 21 ms tick (worst case, all on), leaving headroom in the current 14–34% TX baseline.
 
-All visual design defers to existing tokens and established panel vocabulary (CFC, DspPanel). No new colors, fonts, or layout patterns are introduced. Six open questions are flagged for Brian's sign-off: accordion vs. section layout, flow diagram prominence, EQ graphical curve display timing, block order, preset stashing strategy, and bass enhancer UI explanation.
+All visual design defers to existing tokens and established panel vocabulary (CFC, DspPanel). No new colors, fonts, or layout patterns are introduced. Six open questions are flagged for maintainer sign-off: accordion vs. section layout, flow diagram prominence, EQ graphical curve display timing, block order, preset stashing strategy, and bass enhancer UI explanation.
 

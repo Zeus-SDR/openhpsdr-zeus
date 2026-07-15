@@ -3,7 +3,7 @@
 Openhpsdr-Zeus pulls its plugin catalog from a separate repository at
 **[Kb2uka/openhpsdr-zeus-plugins](https://github.com/Kb2uka/openhpsdr-zeus-plugins)**.
 
-The curator (Brian Keating, EI6LF) will transfer the repo to KB2UKA at
+The curator will transfer the repo to KB2UKA at
 a later date.
 
 ## Where Zeus fetches from

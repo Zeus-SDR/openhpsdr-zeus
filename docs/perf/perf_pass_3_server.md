@@ -4,10 +4,10 @@
 
 One row per fix. Each row gives file:line, what changed, the hotspot
 quantification from `perf_pass_3_baseline.md` §3, and the expected delta
-on the alloc-rate / work-item / CPU axes captured from Brian's live HL2
+on the alloc-rate / work-item / CPU axes captured from the live reference HL2
 session.
 
-> **Measurement note.** Brian's live OpenhpsdrZeus (PID 13972, Debug,
+> **Measurement note.** the live reference OpenhpsdrZeus (PID 13972, Debug,
 > `OPENHPSDR-Zeus/OpenhpsdrZeus/bin/Debug/net10.0`) is the only process on
 > the box currently driving the HL2 hot paths (RxLoop / StartIqPump /
 > TxLoop / StreamingHub broadcasts). The perf3 worktree's Release build
@@ -15,7 +15,7 @@ session.
 > work-items/s, ~1.2 % CPU of one core** — the broadcast path
 > early-returns in synthetic mode (`DspPipelineService.cs:1107`), so no
 > radio means no fan-out. **Empirical "after" numbers therefore require
-> Brian to restart his session from this branch.** The "before" column
+> the operator to restart the session from this branch.** The "before" column
 > below was captured live 2026-05-11 13:27–13:28 IST against PID 13972;
 > the expected-delta column is grounded in the perf3 alloc breakdown.
 
@@ -52,7 +52,7 @@ Idle floor (Release, no radio, my build): 31 KB/s alloc, 62 work/s,
 | 4 | `1db1c8d` | `Zeus.Server.Hosting/DspPipelineService.cs:758-815` | StartPsFeedbackPumpP2 (`:766`) + StartPsFeedbackPumpP1 (`:801`) — same `await foreach` over `PsFeedbackFrames` channel | Same `await foreach` → `ChannelReader.ReadAsync` rewrite as #2. Runs at ~188 frame/s when PS is armed (192 kHz / 1024 paired samples). Both reader pumps preserved byte-identical `FeedPsFeedbackBlock` body under the new loop shape. | Alloc-rate **~−2 %** of original (PS-only, ~half the IQ rate). Combined cumulative −32 %. Most win shows up when PureSignal is armed during TX. |
 
 After all four commits the combined expected effect
-on Brian's live session is ~−30 % alloc-rate (~1.64 → ~1.16 MB/s), a
+on the live reference session is ~−30 % alloc-rate (~1.64 → ~1.16 MB/s), a
 proportional drop in gen0 GC frequency, and a smaller dip in work-item
 throughput. CPU `s/s` won't change much in user-mode because the syscall
 path is unchanged; the win is GC pressure and steady-state heap churn.
@@ -68,10 +68,10 @@ path is unchanged; the win is GC pressure and steady-state heap churn.
 
 ## How to validate
 
-Brian's bench:
+The reference bench:
 
 ```bash
-# In Brian's main repo (OPENHPSDR-Zeus), stop the Debug session, switch to
+# In the reference main repo (OPENHPSDR-Zeus), stop the Debug session, switch to
 # the perf_pass_3 branch and run a clean Release:
 pkill -f 'Zeus.Server.dll'
 git fetch && git checkout feature/perf_pass_3

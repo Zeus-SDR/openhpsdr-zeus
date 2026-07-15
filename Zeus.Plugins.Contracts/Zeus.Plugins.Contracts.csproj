@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <PackageId>Openhpsdr.Zeus.Plugins.Contracts</PackageId>
     <Description>Public surface for Openhpsdr-Zeus plugins. Reference from plugin projects.</Description>
-    <Authors>Brian Keating (EI6LF) and contributors</Authors>
+    <Authors>Douglas J. Cerrato (KB2UKA), Christian Suarez (N9WAR), and contributors</Authors>
     <PackageLicenseExpression>GPL-2.0-or-later</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/brianbruff/openhpsdr-zeus</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Zeus-SDR/openhpsdr-zeus</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

@@ -891,12 +891,12 @@ These are observations from the research that the master PRD should incorporate:
 > the block ordering to the operator (`"chain": ["Gate","Eq",...]` in
 > the preset JSON). Zeus v1 — fixed order (EQ → Comp → Exciter → Bass →
 > Reverb), or operator-reorderable? Fixed is simpler UI; reorderable is
-> more flexible. **No recommendation** — pure visual/UX call. Brian's.
+> more flexible. **No recommendation** — pure visual/UX call for the maintainer.
 
 > **Open question for sign-off:** Two-tier parameter visibility
 > ("Basic / Advanced" split) as is common in modern voice plugins, or
 > all-parameters-always-visible (AetherSDR's pattern)? **No
-> recommendation** — pure UX call. Brian's.
+> recommendation** — pure UX call for the maintainer.
 
 > **Open question for sign-off:** All five v1 blocks can be either pure-
 > managed (C#) or native (P/Invoke into WDSP / verblib / hand-authored

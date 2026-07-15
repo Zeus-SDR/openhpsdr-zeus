@@ -19,7 +19,7 @@ trades visual feel for CPU.
 ## Live capture harness
 
 Playwright MCP Chrome 147 in the worktree directory, 1600×1000
-viewport, second tab on Brian's running HL2-connected Zeus.Server
+viewport, second tab on the running reference HL2-connected Zeus.Server
 :6060 (live RX 192 kHz LSB on 40 m). Vite dev on :5183 from this
 worktree, proxy → :6060.
 

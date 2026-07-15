@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -1733,7 +1733,7 @@ public sealed class RadioService : IDisposable
     ///   - P2 OrionMkII (G2 / Saturn) → 0.6121
     ///   - P2 ANAN-7000 / 8000 (default P2) → 0.2899
     ///   - HermesLite2 (either protocol) → 0.233 (MI0BOT special, but only if
-    ///     someone connects an HL2 — Brian's Hermes is original, not HL2)
+    ///     someone connects an HL2 — the reference Hermes is original, not HL2)
     /// Source authority: Thetis clsHardwareSpecific.cs:295-318 +
     /// pihpsdr transmitter.c:1166-1179 NEW_DEVICE_SATURN.
     /// </summary>

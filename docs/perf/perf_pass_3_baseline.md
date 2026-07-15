@@ -1,6 +1,6 @@
 # perf-pass-3 — baseline
 
-Static code review + **live HL2 profile capture** of Brian's running
+Static code review + **live HL2 profile capture** of the running reference
 session (PID 13972, HL2 at 192.168.100.21, 192 kHz LSB on 40 m,
 2026-05-11 13:11–13:18 IST). All numbers in §2 / §3a / §4a / §5a are
 **live HL2**, captured this pass. Static-only inferences are flagged.
@@ -40,12 +40,12 @@ ground for pass-3.
 
 ## 2. Live HL2 profile evidence (this pass)
 
-Brian's process: `Zeus.Server` PID 13972, **Debug build** (`bin/Debug/net10.0`),
+The reference process: `Zeus.Server` PID 13972, **Debug build** (`bin/Debug/net10.0`),
 .NET 10.0.103, 28 min uptime at capture start, 257 MB RSS, HL2 connected
 at 192.168.100.21 @ 192 kHz LSB 40 m, AGC + EMNR + auto-att, audio
 context running.
 
-> **Debug-build caveat.** Brian's running session is Debug. Release would
+> **Debug-build caveat.** the running reference session is Debug. Release would
 > shave a few pp from managed-frame CPU but leaves WDSP P/Invoke and
 > kernel syscalls unchanged. Numbers below are upper bounds for managed
 > overhead and ground truth for native cost.
@@ -73,7 +73,7 @@ adjustments — bumping CPU above the steady-state RX-only floor.
 - ~48 % one core when the operator is touching the UI
 - ~24 % one core at quiet steady-state RX
 
-`top` (10 logical CPUs) reports per-core scaled. Brian sees this as
+`top` (10 logical CPUs) reports per-core scaled. The operator sees this as
 "high" likely because Activity Monitor reports the same number normalised
 to 1000 % = 10 cores, so Activity Monitor would read ~5 %. The
 **interactive 50 %** spikes are what jump out subjectively.
@@ -270,7 +270,7 @@ playback queue never underflows. From §4a:
 - Observed audio gap **max in 48 s = 60.4 ms**
 
 A target buffer of 50 ms (1.1 × p99) or even 70 ms (1.15 × max) would
-absorb every jitter event seen on Brian's LAN. The current 100 ms is
+absorb every jitter event seen on the reference LAN. The current 100 ms is
 roughly **2.2 × p99**. The client is paying 50 ms of latency for jitter
 that never happens on a wired/local network.
 
@@ -292,7 +292,7 @@ that never happens on a wired/local network.
 
 ## 6. Measurement plan for verification on operator machine
 
-The captures in §2 and §4a were taken on Brian's running session. To
+The captures in §2 and §4a were taken on the running reference session. To
 reproduce / refine:
 
 ### 6a. Server CPU + counters + flame chart

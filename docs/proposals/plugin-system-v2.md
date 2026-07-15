@@ -1,6 +1,6 @@
 # Plugin System v2 — Unified Architecture Decision Record
 
-**Status:** Accepted 2026-05-17 (maintainer: Brian, EI6LF)
+**Status:** Accepted 2026-05-17
 **Supersedes:** `docs/prds/plugins-system-architecture.md`, `docs/proposals/vst-host.md`, `docs/proposals/vst-host-phase2-wire.md`
 **Worktree:** `OPENHPSDR-Zeus.Worktrees/feature_plugin_system` on branch `feature/plugin-system`
 **Registry repo:** `github.com/Kb2uka/openhpsdr-zeus-plugins`

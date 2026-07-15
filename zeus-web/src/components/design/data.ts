@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -117,9 +117,9 @@ export type Contact = {
 };
 
 export const CONTACTS: Record<string, Contact> = {
-  EI6LF: {
-    callsign: 'EI6LF',
-    name: 'Brian',
+  W1AW: {
+    callsign: 'W1AW',
+    name: 'Example Operator',
     location: 'Ireland',
     grid: 'IO63VD',
     cq: '14',
@@ -140,10 +140,9 @@ export const CONTACTS: Record<string, Contact> = {
     ant: 'EFHW @ 10m',
     power: '5W',
     qth: 'Dublin',
-    email: 'ei6lf@qrz.com',
-    photoUrl:
-      'https://cdn-bio.qrz.com/f/ei6lf/me.png?p=f46e792eed883c99bf979d6301993341',
-    qrzUrl: 'https://www.qrz.com/db/EI6LF',
+    email: 'w1aw@example.com',
+    photoUrl: 'https://example.com/w1aw.png',
+    qrzUrl: 'https://www.qrz.com/db/W1AW',
   },
   IU2ABC: {
     callsign: 'IU2ABC',

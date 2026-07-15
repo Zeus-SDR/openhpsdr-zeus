@@ -2,7 +2,7 @@
 
 **Beads issue:** zeus-nnc
 **Status:** spec, awaiting implementation
-**Author:** Brian Keating (EI6LF), drafted 2026-05-23
+**Status:** Drafted 2026-05-23
 **Supersedes UX from:** issue #427 (CTUN toggle introduced), commit 4491ad9 (#461 — band-change retune)
 
 ---
@@ -31,7 +31,7 @@ The desired interaction (this PRD) is the inverse: drag moves the **view** throu
 
 - **`vfoHz`** — the operator's tuned frequency. Where the dial cursor sits; what gets demodulated.
 - **`RadioLoHz`** — the radio's hardware NCO center frequency. Defines the center of the IQ stream the radio is capturing.
-- **Sample bandwidth (`sampleBw`)** — the width of the IQ window the radio is capturing, equal to the radio's sample rate in Hz (e.g. 192_000 on a 192 ksps configuration). Brian's default working setup uses ~19.2 kHz at low sample rate; the spec is rate-agnostic.
+- **Sample bandwidth (`sampleBw`)** — the width of the IQ window the radio is capturing, equal to the radio's sample rate in Hz (e.g. 192_000 on a 192 ksps configuration). The reference setup uses ~19.2 kHz at low sample rate; the spec is rate-agnostic.
 - **Viewport span (`viewportSpan`)** — the frequency width currently displayed on the panadapter, set by the zoom level. Always `≤ sampleBw`.
 - **Viewport center** — the frequency at the horizontal center of the visible panel. Equals `RadioLoHz + viewportOffsetHz`.
 - **`viewportOffsetHz`** — frontend-only state introduced by this PRD. Hz offset of the viewport center from `RadioLoHz`. Range constrained so the viewport stays inside the IQ window; outside that range triggers a retune.
@@ -163,7 +163,7 @@ Already handled by PointerEvents. No new code needed beyond keeping the existing
 - Drag past the edge of the sample bandwidth → on release, exactly one `POST /api/radio/lo` fires with the directional landing per the formulas above; on-screen frequencies do not visually jump across the retune.
 - Touch drag behaves identically on mobile/tablet.
 - Build green (`dotnet build Zeus.slnx`, `npm --prefix zeus-web run build`, all existing tests).
-- HL2 bench-tested with the radio tuned to 28400 (10 m, Brian's only resonant antenna). RX-only — no MOX needed for this change.
+- HL2 bench-tested with the radio tuned to 28400 (10 m, the only resonant antenna in the reference setup). RX-only — no MOX needed for this change.
 
 ## Out of scope
 

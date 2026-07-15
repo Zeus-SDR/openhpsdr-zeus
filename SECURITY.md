@@ -9,4 +9,4 @@
 
 ## Reporting a Vulnerability
 
-report any security issues to b@briankeating.net
+report any security issues to support@zeussdr.com

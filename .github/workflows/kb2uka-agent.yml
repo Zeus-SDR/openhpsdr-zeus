@@ -5,7 +5,7 @@ name: KB2UKA-Agent
 # and PR reviews. Fixes are opened as **DRAFT** PRs to `develop` with a
 # "🚫 DO NOT MERGE" banner — the bot NEVER merges; KB2UKA tests and merges.
 # Runs as the KB2UKA-Agent GitHub App identity (App ID 3702876) on KB2UKA's own
-# Anthropic OAuth token — completely separate from Brian's Zeus-Agent
+# Anthropic OAuth token — completely separate from the legacy Zeus-Agent
 # (zeus-agent.yml) and the upstream @claude bot (claude.yml).
 #
 # Secrets required (set via `gh secret set`):

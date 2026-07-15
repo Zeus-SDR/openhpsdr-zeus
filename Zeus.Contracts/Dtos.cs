@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -174,7 +174,7 @@ public sealed record StateDto(
     // TX Leveler max-gain ceiling in dB. Range [0, 15] — 0 disables the
     // headroom entirely, 15 matches Thetis's stock ceiling
     // (radio.cs:2979 tx_leveler_max_gain = 15.0). Default 8.0 matches
-    // WdspDspEngine.DefaultLevelerMaxGainDb (Brian's HL2 starting point;
+    // WdspDspEngine.DefaultLevelerMaxGainDb (the established HL2 starting point;
     // softer than Thetis stock). Persisted server-side; previously
     // localStorage-only on the client and reverted on every restart. Wire
     // name matches the existing /api/tx/leveler-max-gain endpoint response.

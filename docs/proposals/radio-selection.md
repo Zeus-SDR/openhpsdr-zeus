@@ -1,7 +1,7 @@
 # Proposal: Radio selection — discovery plus manual endpoint entry
 
 **Status:** Draft — awaiting maintainer review
-**Author:** AI agent survey, for Brian (EI6LF) review
+**Author:** Survey for maintainer review
 **Scope:** Extend the startup connect dialog so operators can connect to a radio by manually entering IP, port, and protocol, while keeping LAN auto-discovery as the default. Persist manual endpoints and the last-used choice so reconnects on a known radio are one click.
 
 ---

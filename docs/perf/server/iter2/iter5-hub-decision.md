@@ -26,7 +26,7 @@ consumer pumps (`StartIqPump`, `StartIqPumpP2`, `StartPsFeedbackPumpP1`,
 | Hub → SendLoop | 1× TP wake/frame × N clients = ~65 wake/s × N | unchanged | NOT the hot path |
 
 The hub → SendLoop wake-up volume is roughly two orders of magnitude
-smaller than the eliminated pump volume. With Brian's single-client
+smaller than the eliminated pump volume. With the single-client reference
 measurement scenario (~65 Hz: 30 display + 30 audio + 5 meters), the
 hub-sender path is ~65 TP wake-ups/sec on ONE TP worker. That's well
 under the per-iter floor we measured pre-iter1.

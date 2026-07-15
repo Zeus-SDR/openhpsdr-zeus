@@ -196,7 +196,7 @@ public class MorseEncoderTests
         // A well-formed CW stream must never have two consecutive
         // key-down or key-up symbols — that would mean we forgot a gap
         // or fused two pulses. Spot-check on a substantial sample.
-        var sym = MorseEncoder.Encode("CQ CQ DE EI6LF EI6LF K", 20).ToList();
+        var sym = MorseEncoder.Encode("CQ CQ DE W1AW W1AW K", 20).ToList();
         Assert.NotEmpty(sym);
         for (int i = 1; i < sym.Count; i++)
         {

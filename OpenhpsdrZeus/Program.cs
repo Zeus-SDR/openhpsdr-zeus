@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -156,7 +156,7 @@ public partial class Program
         // ZEUS_PORT overrides the default (used by the /run skill's portOffset).
         var httpPort = int.TryParse(Environment.GetEnvironmentVariable("ZEUS_PORT"), out var zp) ? zp : 6060;
         // PERF_PASS_3_DEBUG: allow disabling HTTPS + LAN bind for a second instance
-        // on the same box (Brian's main session keeps :6443/40001). Uncommitted.
+        // on the same box (the primary session keeps :6443/40001). Uncommitted.
         var perfTest = Environment.GetEnvironmentVariable("ZEUS_PERF_TEST") == "1";
 
         var options = new ZeusHostOptions

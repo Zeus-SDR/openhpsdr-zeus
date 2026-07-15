@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF),
-//                         Douglas J. Cerrato (KB2UKA), and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA),
+//                         Christian Suarez (N9WAR), and contributors.
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -1210,7 +1210,7 @@ public sealed class WdspDspEngine : IDspEngine
             NativeMethods.SetTXACompressorRun(id, 0);
             NativeMethods.SetTXACFCOMPRun(id, 0);
             NativeMethods.SetTXAPHROTRun(id, 0);
-            // CESSB / osctrl — ON at TXA open (Brian's default, ~1-1.5 dB
+            // CESSB / osctrl — ON at TXA open (established default, ~1-1.5 dB
             // average voice-SSB power; bd zeus-5cg). PS isn't armed at open, so
             // this is the correct non-PS state. It is then toggled OFF while PS
             // is armed and back ON on disarm in SetPsEnabled — because osctrl
@@ -1966,7 +1966,7 @@ public sealed class WdspDspEngine : IDspEngine
                 // ALC it makes the peak envelope non-stationary on voice, so PS
                 // sees a moving target at the peaks → voice-peak splatter. Off
                 // here = the reference topology (Thetis/pi/desk keep it out of
-                // the PS path). Restored to Brian's default (ON) on disarm — so
+                // the PS path). Restored to the established default (ON) on disarm — so
                 // non-PS operators keep the ~1-1.5 dB average-power win.
                 NativeMethods.SetTXAosctrlRun(id, 0);
             }
@@ -1997,7 +1997,7 @@ public sealed class WdspDspEngine : IDspEngine
                 }
                 NativeMethods.SetPSRunCal(id, 0);
                 NativeMethods.SetPSControl(id, 1, 0, 0, 0);
-                // Restore CESSB/osctrl ON — Brian's default for non-PS voice
+                // Restore CESSB/osctrl ON — the established default for non-PS voice
                 // SSB (~1-1.5 dB average power; bd zeus-5cg). Only held off
                 // while PS is armed (see the enable branch above).
                 NativeMethods.SetTXAosctrlRun(id, 1);

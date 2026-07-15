@@ -4,7 +4,7 @@ name: Sync develop → experimental
 # branches with distinct trust levels:
 #
 #   main         — tagged releases only. Code-owner approval required.
-#   develop      — humans (Doug/Brian/Ramón) PR + merge here. Code-owner
+#   develop      — humans (Doug/Ramón) PR + merge here. Code-owner
 #                  approval required. The "trusted" canonical branch.
 #   experimental — the kb2uka-agent autonomous coding agent commits +
 #                  PRs + auto-merges here. No human approval required

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Zeus — OpenHPSDR Protocol-1 / Protocol-2 client.
-// Copyright (C) 2025-2026 Brian Keating (EI6LF) and contributors.
+// Copyright (C) 2025-2026 Douglas J. Cerrato (KB2UKA), Christian Suarez (N9WAR), and contributors.
 
 using System.Globalization;
 using System.Text;
@@ -59,7 +59,7 @@ public static class TciCwParser
     /// <summary>
     /// Parse <c>cw_msg:rx,part[,part...][,N];</c>. Accepts both the
     /// single-text form (<c>cw_msg:0,CQ TEST;</c>) and the prefix /
-    /// callsign / suffix form (<c>cw_msg:0,CQ ,EI6LF, K;</c>). When the
+    /// callsign / suffix form (<c>cw_msg:0,CQ ,W1AW, K;</c>). When the
     /// trailing argument parses as a small integer (1..<see cref="MaxCwMsgRepeats"/>)
     /// it is treated as a repeat count; otherwise it is appended verbatim
     /// to the text — see <see cref="MaxCwMsgRepeats"/> for the bound.

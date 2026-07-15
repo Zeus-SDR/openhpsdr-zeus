@@ -73,7 +73,7 @@
 .am-tile .analog-meter-face-wrap {
   position: relative;
   /* v3 Lifted Dark: warm "streetlamp pool" glow rising from the bottom of the
-     gauge well. Final values from Brian's tweak session: hue 31, sat 30%,
+     gauge well. Final values from the tweak session: hue 31, sat 30%,
      opacity 19%, ellipse 150% × 83%, anchored at 50% 100%. */
   background:
     radial-gradient(ellipse 150% 83% at 50% 100%,

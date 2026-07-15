@@ -1,7 +1,7 @@
 # Proposal: MIDI controller support in Zeus
 
 **Status:** Draft — awaiting maintainer review
-**Author:** AI agent survey, for Brian (EI4HQ) review
+**Author:** Survey for maintainer review
 **Scope:** Introduce MIDI controller input (and, later, LED feedback) to Zeus, taking what is useful from Thetis's `Midi2Cat` without inheriting its Windows-only foundations.
 
 ---

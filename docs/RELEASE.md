@@ -221,4 +221,4 @@ After a successful release:
 
 ## Contact
 
-For questions about the release process, open an issue or contact the maintainer (Brian, EI6LF).
+For questions about the release process, open an issue or contact the maintainers.

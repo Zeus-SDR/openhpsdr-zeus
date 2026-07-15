@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Before filing: Zeus aims for parity with Thetis behaviour first, and visual / UX /
-        default-value changes are decided by the maintainer (Brian, EI6LF). Suggestions in
+        default-value changes are decided by the maintainers. Suggestions in
         those areas are welcome, but they may be discussed before any code is written.
 
   - type: textarea

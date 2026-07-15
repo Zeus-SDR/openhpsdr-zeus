@@ -116,8 +116,8 @@ OpenHPSDR Zeus gratefully acknowledges the Thetis contributors:
 - **Sigi Jetzlsperger** (DH1KLM) — Red Pitaya implementation in Thetis, RX2 CAT/MIDI commands
 - **FlexRadio Systems**
 
-OpenHPSDR Zeus contributors to date: **Brian Keating (EI6LF)** — project lead,
-**Douglas J. Cerrato (KB2UKA)**, and **Ramón Martínez (EA5IUE)**.
+OpenHPSDR Zeus contributors to date: **Douglas J. Cerrato (KB2UKA)** — project
+lead, and **Ramón Martínez (EA5IUE)**.
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for the full provenance statement,
 per-component licensing, and the per-file header convention OpenHPSDR Zeus

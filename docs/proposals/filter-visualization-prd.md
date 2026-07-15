@@ -1,6 +1,6 @@
 # PRD — Filter visualization & filter panel
 
-**Status:** Draft (2026-04-23) — Brian Keating (EI6LF), via team-lead.
+**Status:** Draft (2026-04-23) — via team-lead.
 **Related:** `docs/proposals/band-planning-prd.md` (co-designed; this PRD consumes the
 `inBand(freqHz, mode)` predicate from that one).
 **Research:** `docs/proposals/research/wdsp-filter-inventory.md`,
@@ -52,7 +52,7 @@ and is the primary design target of this PRD.
 
 Placement: a single row under the VFO readout, spanning the width of the VFO + mode cluster.
 In the existing Zeus flex-layout it joins the same panel as the VFO/mode/AGC group; the
-maintainer (Brian) signs off on final placement (CLAUDE.md: visual design is red-light, so
+the maintainer signs off on final placement (CLAUDE.md: visual design is red-light, so
 the first PR lands with a plausible default and the maintainer adjusts).
 
 Contents:
