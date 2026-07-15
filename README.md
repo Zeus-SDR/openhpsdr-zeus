@@ -14,11 +14,13 @@ IQ / audio / meter data to a React + WebGL frontend over WebSocket.
 
 ## Source code for released versions
 
-Zeus is licensed under the GNU GPL v2 or later, and the complete corresponding
-source for any released version is available on request at no charge. Email
-**support@zeussdr.com** with the version number shown in the About panel, and
-we will send you the full source for that release. See the `PLUGIN-NOTICE.txt`
-file included with every install for the full written offer.
+Zeus is licensed under the GNU GPL v2 or later. The complete corresponding
+source for any released version is available on a USB drive sent by postal
+mail, for a charge covering our actual cost of the drive, packaging, and
+postage. Email **support@zeussdr.com** with the version number shown in the
+About panel and we will reply with shipping and payment instructions (payment
+by U.S. money order or international money order in U.S. dollars). The full
+written offer is included with every install.
 
 ## About the name
 
